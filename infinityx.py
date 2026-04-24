@@ -119,11 +119,13 @@ ARQUIVOS: "listar_pasta" (pasta), "organizar_pasta" (pasta, executar: bool),
           "search_files" (query, folder, ext), "file_info" (path),
           "compress"/"extract" (files/output, zip_file/dest), "cleanup_temp"
 APPS/BROWSER - REGRAS CRÍTICAS:
-- "abrir" → ação GENÉRICA que tenta app primeiro, depois site, depois Google
-  • Apps desktop instalados: chrome, firefox, edge, discord, spotify, notepad, calc, explorer
-  • Sites populares: youtube, google, facebook, instagram, twitter, reddit, gmail, netflix, amazon
-  • Se não encontrar nem app nem site → pesquisa no Google
-- "browser_search" → para PESQUISAR algo (query + engine)
+- "abrir" → ação GENÉRICA e AUTÓNOMA
+  • Primeiro tenta abrir como app desktop (chrome, firefox, edge, notepad, calc, explorer)
+  • Se não for app instalado → PESQUISA ONLINE automaticamente para encontrar URL oficial
+  • A IA NÃO precisa diferenciar entre app e site - o sistema decide sozinho
+  • Ex: "abre o discord" → tenta app → se não existir, pesquisa "discord site oficial"
+  • Ex: "abre youtube shorts" → pesquisa "youtube shorts" e encontra URL específica
+- "browser_search" → apenas para PESQUISAR algo no Google/Bing (query + engine)
 - "youtube_music" → especificamente para YouTube Music com shuffle
 
 MÍDIA: "speak" (text, lang), "volume_set" (level), "volume_mute", "screenshot" (path)
@@ -546,125 +548,70 @@ def action_cleanup_temp() -> str:
 # AÇÕES - APPS & BROWSER
 # ============================================================================
 def action_abrir(app: str) -> str:
-    """Tenta abrir como app, depois como site, depois pesquisa no Google."""
+    """Abre apps/sites de forma 100% autónoma: tenta app local → pesquisa online para URL."""
     try:
-        app_lower = app.lower().strip()
+        app_lower = app.strip().lower()
         
-        # Mapeamento de aliases para apps
-        app_map = {"browser":"chrome","navegador":"chrome","chrome":"chrome","firefox":"firefox","edge":"msedge","notepad":"notepad","calculadora":"calc","explorer":"explorer"}
-        app_key = app_map.get(app_lower, app_lower)
+        # Extrair path específico se mencionado (ex: "youtube shorts" → youtube + shorts)
+        partes = app_lower.split()
+        app_base = partes[0] if partes else app_lower
+        path_especifico = " ".join(partes[1:]) if len(partes) > 1 else None
         
-        # 1️⃣ Tentar abrir como aplicação desktop
-        app_paths = {
-            "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-            "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
-            "msedge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-            "discord": r"C:\Users\João\AppData\Local\Discord\app-*\Update.exe",
-            "spotify": r"C:\Users\João\AppData\Roaming\Spotify\Spotify.exe",
-            "notepad": "notepad.exe", 
-            "calc": "calc.exe", 
-            "explorer": "explorer.exe"
-        }
-        
-        # Verifica se é um app conhecido
-        if app_key in app_paths:
-            app_path = app_paths[app_key]
-            # Para paths com wildcard (como Discord), encontrar o arquivo real
-            if '*' in app_path:
-                import glob
-                matches = glob.glob(app_path)
-                if matches:
-                    app_path = matches[-1]  # Usa a versão mais recente
-                else:
-                    app_path = None
-            
-            if app_path and os.path.exists(app_path):
-                subprocess.Popen([app_path], shell=True)
-                return f"✅ Abrindo: {app}"
-            else:
-                # App não instalado, tenta como site
-                pass
-        else:
-            # Tenta abrir diretamente (pode ser um comando do sistema ou app no PATH)
+        # 1️⃣ Tentar abrir como APP DESKTOP instalado (apenas apps muito comuns no PATH)
+        apps_comuns = ["chrome", "firefox", "edge", "notepad", "calc", "explorer"]
+        if app_base in apps_comuns:
             try:
-                os.startfile(app_key)
-                return f"✅ Abrindo: {app}"
+                if sys.platform == "win32":
+                    os.startfile(app_base)
+                else:
+                    subprocess.Popen([app_base])
+                return f"✅ Abrindo app: {app}"
             except:
-                pass
+                pass  # Não está instalado, continua para pesquisa online
         
-        # 2️⃣ Se não é app, verificar se é um site popular
-        sites_populares = {
-            "youtube": "https://www.youtube.com",
-            "youtube shorts": "https://www.youtube.com/shorts",
-            "youtube music": "https://music.youtube.com/shuffle",
-            "google": "https://www.google.com",
-            "gmail": "https://mail.google.com",
-            "facebook": "https://www.facebook.com",
-            "instagram": "https://www.instagram.com",
-            "twitter": "https://twitter.com",
-            "x": "https://twitter.com",
-            "reddit": "https://www.reddit.com",
-            "netflix": "https://www.netflix.com",
-            "spotify": "https://open.spotify.com",
-            "amazon": "https://www.amazon.com",
-            "twitch": "https://www.twitch.tv",
-            "discord": "https://discord.com/app",
-            "whatsapp": "https://web.whatsapp.com",
-            "telegram": "https://web.telegram.org",
-            "tiktok": "https://www.tiktok.com",
-            "linkedin": "https://www.linkedin.com",
-            "github": "https://github.com",
-            "pinterest": "https://www.pinterest.com",
-            "tumblr": "https://www.tumblr.com",
-            "snapchat": "https://www.snapchat.com",
-            "medium": "https://medium.com",
-            "quora": "https://www.quora.com",
-            "stackoverflow": "https://stackoverflow.com",
-            "wikipedia": "https://www.wikipedia.org",
-            "yahoo": "https://www.yahoo.com",
-            "bing": "https://www.bing.com",
-            "duckduckgo": "https://duckduckgo.com",
-            "ebay": "https://www.ebay.com",
-            "paypal": "https://www.paypal.com",
-            "dropbox": "https://www.dropbox.com",
-            "drive": "https://drive.google.com",
-            "docs": "https://docs.google.com",
-            "sheets": "https://sheets.google.com",
-            "slides": "https://slides.google.com",
-            "maps": "https://maps.google.com",
-            "translate": "https://translate.google.com",
-            "news": "https://news.google.com",
-            "photos": "https://photos.google.com",
-            "calendar": "https://calendar.google.com",
-            "meet": "https://meet.google.com",
-            "zoom": "https://zoom.us",
-            "teams": "https://teams.microsoft.com",
-            "slack": "https://slack.com",
-            "trello": "https://trello.com",
-            "asana": "https://asana.com",
-            "notion": "https://www.notion.so",
-            "figma": "https://www.figma.com",
-            "canva": "https://www.canva.com",
-        }
+        # 2️⃣ PESQUISA ONLINE para encontrar URL oficial (IA autónoma - sem listas fixas!)
+        try:
+            from googlesearch import search
+            termo_busca = f"{app} site oficial" if not path_especifico else f"{app} {path_especifico}"
+            print(f"🔍 Pesquisando online por: '{termo_busca}'...")
+            
+            results = list(search(termo_busca, num_results=5, lang="pt"))
+            
+            # Filtra resultados para encontrar URLs válidas da plataforma solicitada
+            for result in results:
+                resultado_limpo = result.lower().replace("-", "").replace(" ", "")
+                busca_limpa = app_lower.replace(" ", "").replace("-", "")
+                
+                # Verifica se a URL é relevante para o que foi pedido
+                if any(ext in result for ext in [".com", ".org", ".pt", ".br", ".io", ".co", ".net"]):
+                    if busca_limpa in resultado_limpo or app_base in resultado_limpo:
+                        # Se tem path específico, tenta encontrar URL com esse path
+                        if path_especifico:
+                            if path_especifico in result.lower():
+                                webbrowser.open_new_tab(result)
+                                return f"🌐 Abrindo: {result}"
+                        else:
+                            webbrowser.open_new_tab(result)
+                            return f"🌐 Abrindo: {result}"
+            
+            # Se não encontrou URL específica, abre primeiro resultado relevante
+            if results:
+                webbrowser.open_new_tab(results[0])
+                return f"🌐 Abrindo (pesquisa): {results[0]}"
+            
+        except ImportError:
+            print("⚠️ Módulo 'googlesearch' não disponível.")
+        except Exception as e:
+            print(f"⚠️ Erro na pesquisa: {e}")
         
-        for nome_site, url in sites_populares.items():
-            if nome_site in app_lower:
-                webbrowser.open_new_tab(url)
-                return f"✅ Abrindo: {nome_site.title()}"
-        
-        # 3️⃣ Se não é app nem site conhecido, pesquisa no Google
+        # Fallback: pesquisa genérica no Google
         query = urllib.parse.quote(app_lower)
-        webbrowser.open_new_tab(f"https://www.google.com/search?q={query}")
+        url_pesquisa = f"https://www.google.com/search?q={query}"
+        webbrowser.open_new_tab(url_pesquisa)
         return f"🔍 Pesquisando '{app}' no Google"
         
     except Exception as e:
-        # Fallback final: pesquisa no Google
-        try:
-            query = urllib.parse.quote(app_lower)
-            webbrowser.open_new_tab(f"https://www.google.com/search?q={query}")
-            return f"🔍 Pesquisando '{app}' no Google"
-        except:
-            return f"❌ Erro ao abrir/pesquisar: {e}"
+        return f"❌ Erro ao abrir/pesquisar: {e}"
 
 def action_browser_search(query: str, engine: str = "google") -> str:
     engines = {
