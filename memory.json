@@ -1,0 +1,643 @@
+{
+  "historico": [
+    {
+      "ent": "oi",
+      "res": "Oi! Tudo bem?"
+    },
+    {
+      "ent": "quantos graus estão agora?",
+      "res": "As duas respostas são úteis, mas ambas precisam de mais informações para serem completamente úteis. "
+    },
+    {
+      "ent": "que dia é hoje?",
+      "res": "23/04/2026"
+    },
+    {
+      "ent": "que horas são?",
+      "res": "19:29"
+    },
+    {
+      "ent": "abre o browser",
+      "res": "As respostas fornecidas descrevem corretamente as opções para abrir um navegador no sistema operacio"
+    },
+    {
+      "ent": "quero que tu faças isso",
+      "res": "As duas respostas apresentam uma mensagem semelhante, ambas pedindo mais informações para entender m"
+    },
+    {
+      "ent": "1+1?",
+      "res": "A melhor resposta é a segunda, pois ela explica o motivo pela qual a resposta é 2. A primeira respos"
+    },
+    {
+      "ent": "oquê que tu consegues fazer?",
+      "res": "Ambas as respostas apresentam uma lista de tarefas que podem ser executadas por um assistente inteli"
+    },
+    {
+      "ent": "então quanto é 1+4/30",
+      "res": "As respostas estão corretas e ambas chegam à mesma conclusão. No entanto, a segunda opção é mais pre"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Vamos lá."
+    },
+    {
+      "ent": "que dia é hoje?",
+      "res": "23/04/2026"
+    },
+    {
+      "ent": "quantos graus estão agora?",
+      "res": "Erro clima: URL can't contain control characters. '/data/2.5/weather?q=São Paulo&appid=df02e5bf3be21"
+    },
+    {
+      "ent": "1+2/6",
+      "res": "1.3333333333333333"
+    },
+    {
+      "ent": "qual é a raiz quadrada de nove?",
+      "res": "As duas respostas são equivalentes e ambas corretas. A primeira afirma diretamente que a raiz quadra"
+    },
+    {
+      "ent": "manda um oi no whatsapp usado o browser",
+      "res": "Oi! Vamos lá."
+    },
+    {
+      "ent": "@echo off",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "echo Testing InfinityX with a series of inputs...",
+      "res": "1. \"Testing InfinityX with a variety of data sets...\" is an incomplete statement that suggests ongoi"
+    },
+    {
+      "ent": "echo oi",
+      "res": "Oi! Tudo bem?"
+    },
+    {
+      "ent": "echo que dia ?? hoje?",
+      "res": "23/04/2026"
+    },
+    {
+      "ent": "echo quantos graus est??o agora?",
+      "res": "São Paulo: 20.8°C (sensação 21.1°C) - nuvens quebradas (umidade 84%)"
+    },
+    {
+      "ent": "echo 1+2/6",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "echo qual ?? a raiz quadrada de nove?",
+      "res": "3.0"
+    },
+    {
+      "ent": "echo abre o browser",
+      "res": "Abrindo: notepad"
+    },
+    {
+      "ent": "oi",
+      "res": "Fala! Bora trabalhar."
+    },
+    {
+      "ent": "1+1",
+      "res": "2"
+    },
+    {
+      "ent": "764873+5436/43534",
+      "res": "764873.1248679194"
+    },
+    {
+      "ent": "raiz quadrada de 8",
+      "res": "2.8284271247461903"
+    },
+    {
+      "ent": "raiz quadrada de catorze",
+      "res": "La segunda opción presenta un enfoque más práctico para la representación del resultado, considerand"
+    },
+    {
+      "ent": "quaintos graus é que estão agora?",
+      "res": "São Paulo: 20.7°C (sensação 21.0°C) - nuvens quebradas (umidade 84%)"
+    },
+    {
+      "ent": "em lisboa",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "quaintos graus é que estão agora em lisboa?",
+      "res": "Lisboa: 15.1°C (sensação 14.8°C) - céu pouco nublado (umidade 82%)"
+    },
+    {
+      "ent": "qual é a previsão para amanhã?",
+      "res": "São Paulo: 20.7°C (sensação 21.0°C) - nuvens quebradas (umidade 84%)"
+    },
+    {
+      "ent": "abre o browser",
+      "res": "Abrindo: notepad"
+    },
+    {
+      "ent": "eu disse o browser e não o notepad",
+      "res": "Ambas as respostas oferecem informações valiosas e abordam diferentes aspectos da situação apresenta"
+    },
+    {
+      "ent": "qual é o melhor anime?",
+      "res": "Ambas as respostas destacam várias séries e filmes notáveis dentro da indústria de mangá e anime, ma"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Tudo bem?"
+    },
+    {
+      "ent": "tudo bem?",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "como vai o teu dia?",
+      "res": "La respuesta número uno es más completa y detallada porque proporciona una explicación clara sobre l"
+    },
+    {
+      "ent": "um mais um",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "rais quadrada de nove",
+      "res": "La respuesta correcta es la segunda opción ya que proporciona una explicación más detallada sobre có"
+    },
+    {
+      "ent": "abre o browser",
+      "res": "Abrindo: chrome"
+    },
+    {
+      "ent": "chrome",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "chrome",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "abre o chrome",
+      "res": "Abrindo: chrome"
+    },
+    {
+      "ent": "quantos graus estão agora?",
+      "res": "Torres Vedras: 15.0°C (sensação 14.9°C) - nublado (umidade 89%)"
+    },
+    {
+      "ent": "e amanhã?",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Vamos lá."
+    },
+    {
+      "ent": "tudo bem?",
+      "res": "Tudo certinho! Em que posso ajudar?"
+    },
+    {
+      "ent": "1+1?",
+      "res": "2"
+    },
+    {
+      "ent": "e dois menos catorze",
+      "res": "A comparação entre as duas opções apresentadas revela que ambas expressam o mesmo conceito numérico "
+    },
+    {
+      "ent": "um mais um",
+      "res": "2"
+    },
+    {
+      "ent": "dois menos nove",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "olá",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois menos 6",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "português?",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "quantos graus estão agora?",
+      "res": "Torres Vedras: 15.0°C (sensação 14.9°C) - nublado (umidade 89%)"
+    },
+    {
+      "ent": "abre  o browser",
+      "res": "Abrindo: chrome"
+    },
+    {
+      "ent": "abre o whatsapp no browser",
+      "res": "Abrindo: chrome"
+    },
+    {
+      "ent": "não era para abrir uma nova janela, era para abrir a aba do whatsapp",
+      "res": "Abrindo: não era para uma nova janela, era para a aba do whatsapp"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Vamos lá."
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Tudo bem?"
+    },
+    {
+      "ent": "dois menos nove",
+      "res": "-7"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "-12"
+    },
+    {
+      "ent": "um mais um",
+      "res": "2"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tres",
+      "res": "15"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois mais dois",
+      "res": "4"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois mais dois",
+      "res": "4"
+    },
+    {
+      "ent": "um mais um",
+      "res": "2"
+    },
+    {
+      "ent": "dois menos nove",
+      "res": "-7"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois menos dois",
+      "res": "0"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois menos dois",
+      "res": "0"
+    },
+    {
+      "ent": "um mais um",
+      "res": "2"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "-12"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois mais dois",
+      "res": "4"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tres",
+      "res": "15"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "dois mais dois",
+      "res": "4"
+    },
+    {
+      "ent": "oi",
+      "res": "Fala! Bora trabalhar."
+    },
+    {
+      "ent": "1+1",
+      "res": "2"
+    },
+    {
+      "ent": "um mais um",
+      "res": "2"
+    },
+    {
+      "ent": "doze meno vinte",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "doze menos vinte",
+      "res": "-8"
+    },
+    {
+      "ent": "quatrocentos menos dois",
+      "res": "-2"
+    },
+    {
+      "ent": "quantos graus estão agora?",
+      "res": "Torres Vedras: 15.5°C (sensação 15.4°C) - nublado (umidade 89%)"
+    },
+    {
+      "ent": "e amanhã?",
+      "res": "Tudo bem! E com você?"
+    },
+    {
+      "ent": "abre o browser",
+      "res": "✅ Abrindo: chrome"
+    },
+    {
+      "ent": "abre uma abra do youtube",
+      "res": "✅ Abrindo: uma abra do youtube"
+    },
+    {
+      "ent": "abre uma aba do youtube",
+      "res": "✅ Abrindo: uma aba do youtube"
+    },
+    {
+      "ent": "abre o youtube no browser",
+      "res": "✅ Abrindo: chrome"
+    },
+    {
+      "ent": "que dia é hoje?~",
+      "res": "24/04/2026"
+    },
+    {
+      "ent": "toca uma musica",
+      "res": "music (1 arquivos)\n- desktop.ini"
+    },
+    {
+      "ent": "oi",
+      "res": "E aí! Em que posso ajudar?"
+    },
+    {
+      "ent": "1+1",
+      "res": "2"
+    },
+    {
+      "ent": "quatromil menos oitenta",
+      "res": "-80"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Tudo bem?"
+    },
+    {
+      "ent": "tudo bem?",
+      "res": "Estou aqui e pronto pra ajudar!"
+    },
+    {
+      "ent": "toca uma musica",
+      "res": "Para escolher o método mais conveniente de ouvir \"Shape of You\" por Ed Sheeran no YouTube Music, con"
+    },
+    {
+      "ent": "quem é o CR7?",
+      "res": "Cristiano Ronaldo, conhecido como \"CR7\", é um ex-futebolista português que atuou principalmente no R"
+    },
+    {
+      "ent": "abre o whastapp",
+      "res": "✅ Abrindo: o whastapp"
+    },
+    {
+      "ent": "abre o whastapp no  browser",
+      "res": "✅ Abrindo: chrome"
+    },
+    {
+      "ent": "eu disse para abrir um aba como o whatsapp",
+      "res": "🌐 Abrindo: https://web.whatsapp.com"
+    },
+    {
+      "ent": "boa",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    },
+    {
+      "ent": "abre o youtube",
+      "res": "✅ Abrindo: o youtube"
+    },
+    {
+      "ent": "eu disse para abrir um aba como o youtube",
+      "res": "🌐 Abrindo: https://youtube.com"
+    },
+    {
+      "ent": "menos um mais dois",
+      "res": "1"
+    },
+    {
+      "ent": "oi",
+      "res": "E aí! Em que posso ajudar?"
+    },
+    {
+      "ent": "toca uma musica",
+      "res": "Para tocar música em dispositivos usando o YouTube Music, instale a aplicação do app na sua smartpho"
+    },
+    {
+      "ent": "toca uma musica aleatoria",
+      "res": "1. Abra aplicativo YouTube Music, faça login com Google; toque \"Play\" se houver música em execução o"
+    },
+    {
+      "ent": "abre o notepad",
+      "res": "✅ Abrindo: notepad"
+    },
+    {
+      "ent": "cria um scrip em python que retorna \"hello\"",
+      "res": "```java\n\nimport java.math.BigInteger;\n\nimport org.junit.Assert;\n\nimport org.junit.Test;\n\n\n/**\n\n * Cl"
+    },
+    {
+      "ent": "e disse que era em python",
+      "res": "Para aprender como fazer uma determinada coisa em Python, comece com os fundamentos básicos do Pytho"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Vamos lá.",
+      "src": "?"
+    },
+    {
+      "ent": "qual é o teu nome?",
+      "res": "",
+      "src": "llm"
+    },
+    {
+      "ent": "1+1?",
+      "res": "2",
+      "src": "llm"
+    },
+    {
+      "ent": "5+quatro",
+      "res": "9",
+      "src": "llm"
+    },
+    {
+      "ent": "que dia é hoje",
+      "res": "24/04/2026",
+      "src": "?"
+    },
+    {
+      "ent": "abre o youtube na parte de shorts",
+      "res": "✅ Abrindo: youtube",
+      "src": "llm"
+    },
+    {
+      "ent": "era para abrires a aba",
+      "res": "",
+      "src": "llm"
+    },
+    {
+      "ent": "previsão do tempo para amanhã",
+      "res": "Torres Vedras: 20.5°C (sensação 20.5°C) - céu limpo (umidade 73%)",
+      "src": "llm"
+    },
+    {
+      "ent": "e hoje?",
+      "res": "",
+      "src": "llm"
+    },
+    {
+      "ent": "oi",
+      "res": "E aí! Em que ajudo?",
+      "src": "?"
+    },
+    {
+      "ent": "abre o youtube na parte de shorts",
+      "res": "✅ Abrindo: youtube",
+      "src": "llm"
+    },
+    {
+      "ent": "1+1",
+      "res": "2",
+      "src": "llm"
+    },
+    {
+      "ent": "abre o youtube",
+      "res": "✅ Abrindo: youtube",
+      "src": "llm"
+    },
+    {
+      "ent": "abre www.google.com",
+      "res": "Pode-me ajudar a esclarecer melhor o que você está a perguntar?",
+      "src": "llm"
+    },
+    {
+      "ent": "cinco vezes tr?s",
+      "res": "15",
+      "src": "llm"
+    },
+    {
+      "ent": "um mais um",
+      "res": "2",
+      "src": "?"
+    },
+    {
+      "ent": "dois menos catorze",
+      "res": "-12",
+      "src": "?"
+    },
+    {
+      "ent": "oi",
+      "res": "Oi! Vamos lá."
+    },
+    {
+      "ent": "1+dois",
+      "res": "Desculpe, não entendi. Pode reformular ou ser mais específico?"
+    }
+  ],
+  "variaveis": {},
+  "ultima_pasta": "C:\\Users\\João\\music"
+}
