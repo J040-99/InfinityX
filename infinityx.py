@@ -118,9 +118,12 @@ SISTEMA: "clima" (cidade: "São Paulo" ou null), "hora_data", "sysinfo",
 ARQUIVOS: "listar_pasta" (pasta), "organizar_pasta" (pasta, executar: bool),
           "search_files" (query, folder, ext), "file_info" (path),
           "compress"/"extract" (files/output, zip_file/dest), "cleanup_temp"
-APPS/BROWSER: "abrir_app" (app), "abrir_url" (url), 
-              "browser_search" (query, engine: "google"/"youtube"),
-              "youtube_music" (shuffle)
+APPS/BROWSER - ATENÇÃO À DIFERENÇA:
+- "abrir_app" → APENAS para aplicativos DESKTOP instalados (chrome, firefox, notepad, calc, explorer)
+- "abrir_url" → para SITES/URLS específicas (youtube.com, google.com, urls completas)
+- "browser_search" → para PESQUISAR algo no Google/YouTube (quando usuário quer buscar informação)
+- "youtube_music" → especificamente para YouTube Music com shuffle
+
 MÍDIA: "speak" (text, lang), "volume_set" (level), "volume_mute", "screenshot" (path)
 CLIPBOARD: "clipboard_copy" (text), "clipboard_paste", "clipboard_clear"
 TEXTO: "translate" (text, to_lang), "encrypt"/"decrypt" (text/encoded, key)
@@ -138,20 +141,28 @@ AUTOMAÇÃO: "type_text" (text), "press_key" (key), "click" (x, y, button),
 ### FORMATO DE RESPOSTA (JSON PURO):
 {"action":"nome_acao","params":{"param":"valor"},"confidence":0.95}
 
-### REGRAS:
+### REGRAS CRÍTICAS:
 1. Conversa casual → action:"responder", params:{}, confidence:0.99
 2. Baixa certeza → confidence < 0.7 (aciona fallback)
-3. Para apps → normalize: "chrome","firefox","notepad","calc","explorer"
-4. Para pastas → use aliases: downloads, documents, pictures, music, videos, desktop
-5. Para clima → cidade null = usar localização atual via IP
-6. NUNCA invente ações fora da lista
+3. Para apps → SOMENTE programas instalados: "chrome","firefox","notepad","calc","explorer"
+4. Para sites → SEMPRE use "abrir_url" com URL completa: youtube="https://www.youtube.com"
+5. DIFERENÇA CHAVE:
+   - "abre o chrome" → abrir_app (app: "chrome")
+   - "abre o youtube" → abrir_url (url: "https://www.youtube.com")
+   - "pesquisa receitas" → browser_search (query: "receitas", engine: "google")
+6. Para pastas → use aliases: downloads, documents, pictures, music, videos, desktop
+7. Para clima → cidade null = usar localização atual via IP
+8. NUNCA invente ações fora da lista
 
-### EXEMPLOS:
+### EXEMPLOS CORRETOS:
 "oi, tudo bem?" → {"action":"responder","params":{},"confidence":0.99}
 "quantos graus em Lisboa?" → {"action":"clima","params":{"cidade":"Lisboa"},"confidence":0.96}
+"abre o chrome" → {"action":"abrir_app","params":{"app":"chrome"},"confidence":0.95}
+"abre o firefox" → {"action":"abrir_app","params":{"app":"firefox"},"confidence":0.95}
 "abre o youtube" → {"action":"abrir_url","params":{"url":"https://www.youtube.com"},"confidence":0.95}
 "abre o youtube na parte de shorts" → {"action":"abrir_url","params":{"url":"https://www.youtube.com/shorts"},"confidence":0.93}
-"abre o navegador pra pesquisar receitas" → {"action":"browser_search","params":{"query":"receitas","engine":"google"},"confidence":0.91}
+"abre o google pra mim" → {"action":"abrir_url","params":{"url":"https://www.google.com"},"confidence":0.94}
+"pesquisa receitas de bolo no google" → {"action":"browser_search","params":{"query":"receitas de bolo","engine":"google"},"confidence":0.92}
 "organiza meus downloads de verdade" → {"action":"organizar_pasta","params":{"pasta":"Downloads","executar":true},"confidence":0.94}
 "2+2" → {"action":"matematica","params":{"expr":"2+2"},"confidence":0.99}
 "toca uma música aleatória" → {"action":"youtube_music","params":{},"confidence":0.89}
@@ -531,30 +542,72 @@ def action_cleanup_temp() -> str:
 # AÇÕES - APPS & BROWSER
 # ============================================================================
 def action_abrir(app: str) -> str:
+    """Tenta abrir como app, depois como site, depois pesquisa no Google."""
     try:
         app_lower = app.lower().strip()
+        
+        # Mapeamento de aliases para apps
         app_map = {"browser":"chrome","navegador":"chrome","chrome":"chrome","firefox":"firefox","edge":"msedge","notepad":"notepad","calculadora":"calc","explorer":"explorer"}
         app_key = app_map.get(app_lower, app_lower)
-        try:
-            subprocess.Popen(f'start "" "{app_key}"', shell=True)
-            return f"✅ Abrindo: {app}"
-        except:
-            pass
+        
+        # 1️⃣ Tentar abrir como aplicação desktop
         app_paths = {
             "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
             "msedge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
             "notepad": "notepad.exe", "calc": "calc.exe", "explorer": "explorer.exe"
         }
-        if app_key in app_paths and os.path.exists(app_paths[app_key]):
-            subprocess.Popen([app_paths[app_key]], shell=True)
-            return f"✅ Abrindo: {app}"
-        subprocess.Popen([app_key], shell=True)
-        return f"✅ Abrindo: {app}"
-    except FileNotFoundError:
-        return f"❌ '{app}' não encontrado."
+        
+        # Verifica se é um app conhecido e existe
+        if app_key in app_paths:
+            if os.path.exists(app_paths[app_key]):
+                subprocess.Popen([app_paths[app_key]], shell=True)
+                return f"✅ Abrindo: {app}"
+            else:
+                # App não instalado, tenta como site
+                pass
+        else:
+            # Tenta abrir diretamente (pode ser um comando do sistema)
+            try:
+                subprocess.Popen(f'start "" "{app_key}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                return f"✅ Abrindo: {app}"
+            except:
+                pass
+        
+        # 2️⃣ Se não é app, verificar se é um site popular
+        sites_populares = {
+            "youtube": "https://www.youtube.com",
+            "youtube shorts": "https://www.youtube.com/shorts",
+            "youtube music": "https://music.youtube.com/shuffle",
+            "google": "https://www.google.com",
+            "gmail": "https://mail.google.com",
+            "facebook": "https://www.facebook.com",
+            "instagram": "https://www.instagram.com",
+            "twitter": "https://twitter.com",
+            "reddit": "https://www.reddit.com",
+            "netflix": "https://www.netflix.com",
+            "spotify": "https://www.spotify.com",
+            "amazon": "https://www.amazon.com",
+        }
+        
+        for nome_site, url in sites_populares.items():
+            if nome_site in app_lower:
+                webbrowser.open_new_tab(url)
+                return f"✅ Abrindo: {nome_site.title()}"
+        
+        # 3️⃣ Se não é app nem site conhecido, pesquisa no Google
+        query = urllib.parse.quote(app_lower)
+        webbrowser.open_new_tab(f"https://www.google.com/search?q={query}")
+        return f"🔍 Pesquisando '{app}' no Google"
+        
     except Exception as e:
-        return f"❌ Erro: {e}"
+        # Fallback final: pesquisa no Google
+        try:
+            query = urllib.parse.quote(app_lower)
+            webbrowser.open_new_tab(f"https://www.google.com/search?q={query}")
+            return f"🔍 Pesquisando '{app}' no Google"
+        except:
+            return f"❌ Erro ao abrir/pesquisar: {e}"
 
 def action_browser_search(query: str, engine: str = "google") -> str:
     engines = {
@@ -872,10 +925,11 @@ def analisar(entrada: str) -> dict:
                 break
         return {"action": "clima", "cidade": cidade}
     
-    # Apps
-    if any(a in e for a in ["abre","abrir"]) and any(app in e for app in ["chrome","firefox","notepad","calc"]):
-        app = next((a for a in ["chrome","firefox","notepad","calc"] if a in e), "chrome")
-        return {"action": "abrir", "app": app}
+    # Apps - fallback simples (SOMENTE apps desktop conhecidos)
+    if any(a in e for a in ["abre","abrir","abra"]) and any(app in e for app in ["chrome","firefox","edge","notepad","calc","explorer"]):
+        app = next((a for a in ["chrome","firefox","edge","notepad","calc","explorer"] if a in e), None)
+        if app:
+            return {"action": "abrir", "app": app}
     
     # Matemática fallback
     if re.match(r'^[\d\s+\-*/.()%?!.]+$', e) and any(op in e for op in '+-*/'):
