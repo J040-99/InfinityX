@@ -149,6 +149,8 @@ AUTOMAÇÃO: "type_text" (text), "press_key" (key), "click" (x, y, button),
 ### EXEMPLOS:
 "oi, tudo bem?" → {"action":"responder","params":{},"confidence":0.99}
 "quantos graus em Lisboa?" → {"action":"clima","params":{"cidade":"Lisboa"},"confidence":0.96}
+"abre o youtube" → {"action":"abrir_url","params":{"url":"https://www.youtube.com"},"confidence":0.95}
+"abre o youtube na parte de shorts" → {"action":"abrir_url","params":{"url":"https://www.youtube.com/shorts"},"confidence":0.93}
 "abre o navegador pra pesquisar receitas" → {"action":"browser_search","params":{"query":"receitas","engine":"google"},"confidence":0.91}
 "organiza meus downloads de verdade" → {"action":"organizar_pasta","params":{"pasta":"Downloads","executar":true},"confidence":0.94}
 "2+2" → {"action":"matematica","params":{"expr":"2+2"},"confidence":0.99}
@@ -572,6 +574,15 @@ def action_youtube_music_shuffle() -> str:
         webbrowser.open_new_tab("https://music.youtube.com")
         return "🎵 YouTube Music aberto"
 
+def action_abrir_url(url: str) -> str:
+    try:
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        webbrowser.open_new_tab(url)
+        return f"✅ Abrindo: {url}"
+    except Exception as e:
+        return f"❌ Erro ao abrir URL: {e}"
+
 # ============================================================================
 # AÇÕES - MÍDIA, CLIPBOARD & TEXTO
 # ============================================================================
@@ -896,6 +907,7 @@ def executar_acao(dec: dict) -> str:
         "file_info": lambda: action_file_info(dec.get("path","")),
         "cleanup_temp": action_cleanup_temp,
         "abrir": lambda: action_abrir(dec.get("app", "notepad")),
+        "abrir_url": lambda: action_abrir_url(dec.get("url","")),
         "browser_search": lambda: action_browser_search(dec.get("query",""), dec.get("engine","google")),
         "youtube_music_shuffle": action_youtube_music_shuffle,
         "speak": lambda: action_speak(dec.get("text",""), dec.get("lang","pt")),
