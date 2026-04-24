@@ -118,10 +118,12 @@ SISTEMA: "clima" (cidade: "São Paulo" ou null), "hora_data", "sysinfo",
 ARQUIVOS: "listar_pasta" (pasta), "organizar_pasta" (pasta, executar: bool),
           "search_files" (query, folder, ext), "file_info" (path),
           "compress"/"extract" (files/output, zip_file/dest), "cleanup_temp"
-APPS/BROWSER - ATENÇÃO À DIFERENÇA:
-- "abrir_app" → APENAS para aplicativos DESKTOP instalados (chrome, firefox, notepad, calc, explorer)
-- "abrir_url" → para SITES/URLS específicas (youtube.com, google.com, urls completas)
-- "browser_search" → para PESQUISAR algo no Google/YouTube (quando usuário quer buscar informação)
+APPS/BROWSER - REGRAS CRÍTICAS:
+- "abrir" → ação GENÉRICA que tenta app primeiro, depois site, depois Google
+  • Apps desktop instalados: chrome, firefox, edge, discord, spotify, notepad, calc, explorer
+  • Sites populares: youtube, google, facebook, instagram, twitter, reddit, gmail, netflix, amazon
+  • Se não encontrar nem app nem site → pesquisa no Google
+- "browser_search" → para PESQUISAR algo (query + engine)
 - "youtube_music" → especificamente para YouTube Music com shuffle
 
 MÍDIA: "speak" (text, lang), "volume_set" (level), "volume_mute", "screenshot" (path)
@@ -144,11 +146,12 @@ AUTOMAÇÃO: "type_text" (text), "press_key" (key), "click" (x, y, button),
 ### REGRAS CRÍTICAS:
 1. Conversa casual → action:"responder", params:{}, confidence:0.99
 2. Baixa certeza → confidence < 0.7 (aciona fallback)
-3. Para apps → SOMENTE programas instalados: "chrome","firefox","notepad","calc","explorer"
-4. Para sites → SEMPRE use "abrir_url" com URL completa: youtube="https://www.youtube.com"
+3. Para abrir apps/sites → use SEMPRE "abrir" com nome simples
+4. A ação "abrir" tenta: app desktop → site popular → Google search
 5. DIFERENÇA CHAVE:
-   - "abre o chrome" → abrir_app (app: "chrome")
-   - "abre o youtube" → abrir_url (url: "https://www.youtube.com")
+   - "abre o chrome" → abrir (app: "chrome")
+   - "abre o youtube" → abrir (app: "youtube")
+   - "abre o discord" → abrir (app: "discord")
    - "pesquisa receitas" → browser_search (query: "receitas", engine: "google")
 6. Para pastas → use aliases: downloads, documents, pictures, music, videos, desktop
 7. Para clima → cidade null = usar localização atual via IP
@@ -157,11 +160,12 @@ AUTOMAÇÃO: "type_text" (text), "press_key" (key), "click" (x, y, button),
 ### EXEMPLOS CORRETOS:
 "oi, tudo bem?" → {"action":"responder","params":{},"confidence":0.99}
 "quantos graus em Lisboa?" → {"action":"clima","params":{"cidade":"Lisboa"},"confidence":0.96}
-"abre o chrome" → {"action":"abrir_app","params":{"app":"chrome"},"confidence":0.95}
-"abre o firefox" → {"action":"abrir_app","params":{"app":"firefox"},"confidence":0.95}
-"abre o youtube" → {"action":"abrir_url","params":{"url":"https://www.youtube.com"},"confidence":0.95}
-"abre o youtube na parte de shorts" → {"action":"abrir_url","params":{"url":"https://www.youtube.com/shorts"},"confidence":0.93}
-"abre o google pra mim" → {"action":"abrir_url","params":{"url":"https://www.google.com"},"confidence":0.94}
+"abre o chrome" → {"action":"abrir","params":{"app":"chrome"},"confidence":0.95}
+"abre o firefox" → {"action":"abrir","params":{"app":"firefox"},"confidence":0.95}
+"abre o youtube" → {"action":"abrir","params":{"app":"youtube"},"confidence":0.95}
+"abre o youtube na parte de shorts" → {"action":"abrir","params":{"app":"youtube shorts"},"confidence":0.93}
+"abre o google pra mim" → {"action":"abrir","params":{"app":"google"},"confidence":0.94}
+"abre o discord" → {"action":"abrir","params":{"app":"discord"},"confidence":0.95}
 "pesquisa receitas de bolo no google" → {"action":"browser_search","params":{"query":"receitas de bolo","engine":"google"},"confidence":0.92}
 "organiza meus downloads de verdade" → {"action":"organizar_pasta","params":{"pasta":"Downloads","executar":true},"confidence":0.94}
 "2+2" → {"action":"matematica","params":{"expr":"2+2"},"confidence":0.99}
@@ -555,21 +559,35 @@ def action_abrir(app: str) -> str:
             "chrome": r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             "firefox": r"C:\Program Files\Mozilla Firefox\firefox.exe",
             "msedge": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-            "notepad": "notepad.exe", "calc": "calc.exe", "explorer": "explorer.exe"
+            "discord": r"C:\Users\João\AppData\Local\Discord\app-*\Update.exe",
+            "spotify": r"C:\Users\João\AppData\Roaming\Spotify\Spotify.exe",
+            "notepad": "notepad.exe", 
+            "calc": "calc.exe", 
+            "explorer": "explorer.exe"
         }
         
-        # Verifica se é um app conhecido e existe
+        # Verifica se é um app conhecido
         if app_key in app_paths:
-            if os.path.exists(app_paths[app_key]):
-                subprocess.Popen([app_paths[app_key]], shell=True)
+            app_path = app_paths[app_key]
+            # Para paths com wildcard (como Discord), encontrar o arquivo real
+            if '*' in app_path:
+                import glob
+                matches = glob.glob(app_path)
+                if matches:
+                    app_path = matches[-1]  # Usa a versão mais recente
+                else:
+                    app_path = None
+            
+            if app_path and os.path.exists(app_path):
+                subprocess.Popen([app_path], shell=True)
                 return f"✅ Abrindo: {app}"
             else:
                 # App não instalado, tenta como site
                 pass
         else:
-            # Tenta abrir diretamente (pode ser um comando do sistema)
+            # Tenta abrir diretamente (pode ser um comando do sistema ou app no PATH)
             try:
-                subprocess.Popen(f'start "" "{app_key}"', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                os.startfile(app_key)
                 return f"✅ Abrindo: {app}"
             except:
                 pass
@@ -584,10 +602,49 @@ def action_abrir(app: str) -> str:
             "facebook": "https://www.facebook.com",
             "instagram": "https://www.instagram.com",
             "twitter": "https://twitter.com",
+            "x": "https://twitter.com",
             "reddit": "https://www.reddit.com",
             "netflix": "https://www.netflix.com",
-            "spotify": "https://www.spotify.com",
+            "spotify": "https://open.spotify.com",
             "amazon": "https://www.amazon.com",
+            "twitch": "https://www.twitch.tv",
+            "discord": "https://discord.com/app",
+            "whatsapp": "https://web.whatsapp.com",
+            "telegram": "https://web.telegram.org",
+            "tiktok": "https://www.tiktok.com",
+            "linkedin": "https://www.linkedin.com",
+            "github": "https://github.com",
+            "pinterest": "https://www.pinterest.com",
+            "tumblr": "https://www.tumblr.com",
+            "snapchat": "https://www.snapchat.com",
+            "medium": "https://medium.com",
+            "quora": "https://www.quora.com",
+            "stackoverflow": "https://stackoverflow.com",
+            "wikipedia": "https://www.wikipedia.org",
+            "yahoo": "https://www.yahoo.com",
+            "bing": "https://www.bing.com",
+            "duckduckgo": "https://duckduckgo.com",
+            "ebay": "https://www.ebay.com",
+            "paypal": "https://www.paypal.com",
+            "dropbox": "https://www.dropbox.com",
+            "drive": "https://drive.google.com",
+            "docs": "https://docs.google.com",
+            "sheets": "https://sheets.google.com",
+            "slides": "https://slides.google.com",
+            "maps": "https://maps.google.com",
+            "translate": "https://translate.google.com",
+            "news": "https://news.google.com",
+            "photos": "https://photos.google.com",
+            "calendar": "https://calendar.google.com",
+            "meet": "https://meet.google.com",
+            "zoom": "https://zoom.us",
+            "teams": "https://teams.microsoft.com",
+            "slack": "https://slack.com",
+            "trello": "https://trello.com",
+            "asana": "https://asana.com",
+            "notion": "https://www.notion.so",
+            "figma": "https://www.figma.com",
+            "canva": "https://www.canva.com",
         }
         
         for nome_site, url in sites_populares.items():
@@ -891,7 +948,7 @@ def analisar(entrada: str) -> dict:
     if llm and llm.get("confidence", 0) >= CONFIDENCE_THRESHOLD:
         action_map = {
             "responder":"responder","matematica":"matematica","clima":"clima","hora_data":"hora",
-            "abrir_app":"abrir","abrir_url":"abrir_url","browser_search":"browser_search",
+            "abrir":"abrir","abrir_url":"abrir_url","browser_search":"browser_search",
             "listar_pasta":"listar","organizar_pasta":"organizar","sysinfo":"sysinfo",
             "youtube_music":"youtube_music_shuffle","clipboard_copy":"clipboard_copy",
             "clipboard_paste":"clipboard_paste","volume_set":"volume_set","volume_mute":"volume_mute",
