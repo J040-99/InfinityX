@@ -17,8 +17,16 @@ import ctypes
 import io
 import sys
 
+from actions import iniciar_scheduler_lembretes
 from config import MAX_HISTORY
-from memory import MEMORIA, carregar_memoria, carregar_notas, carregar_palavras, salvar_memoria
+from memory import (
+    MEMORIA,
+    carregar_lembretes,
+    carregar_memoria,
+    carregar_notas,
+    carregar_palavras,
+    salvar_memoria,
+)
 from parser import analisar, executar_acao
 
 
@@ -35,6 +43,8 @@ def main() -> None:
     carregar_palavras()
     carregar_memoria()
     carregar_notas()
+    carregar_lembretes()
+    iniciar_scheduler_lembretes()
 
     print("=" * 50)
     print("InfinityX - Assistente Local com IA Autônoma")

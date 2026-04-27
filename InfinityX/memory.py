@@ -1,13 +1,14 @@
-"""Memória persistente: histórico, dicionário pessoal, notas, timers."""
+"""Memória persistente: histórico, dicionário pessoal, notas, lembretes, timers."""
 
 import json
 import os
 
-from config import MEMORIA_FILE, NOTAS_FILE, PALAVRAS_FILE
+from config import LEMBRETES_FILE, MEMORIA_FILE, NOTAS_FILE, PALAVRAS_FILE
 
 MEMORIA: dict = {"historico": [], "variaveis": {}, "ultima_pasta": None}
 PALAVRAS: dict = {}
 NOTAS: list = []
+LEMBRETES: list = []
 TIMERS: dict = {}
 
 
@@ -64,5 +65,25 @@ def salvar_notas() -> None:
     try:
         with open(NOTAS_FILE, 'w', encoding='utf-8') as f:
             json.dump(NOTAS, f, ensure_ascii=False, indent=2)
+    except IOError:
+        pass
+
+
+def carregar_lembretes() -> None:
+    global LEMBRETES
+    try:
+        if os.path.exists(LEMBRETES_FILE):
+            with open(LEMBRETES_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    LEMBRETES = data
+    except (IOError, json.JSONDecodeError):
+        pass
+
+
+def salvar_lembretes() -> None:
+    try:
+        with open(LEMBRETES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(LEMBRETES, f, ensure_ascii=False, indent=2)
     except IOError:
         pass

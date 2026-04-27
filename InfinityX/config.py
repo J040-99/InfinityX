@@ -17,6 +17,7 @@ MEMORIA_FILE = "memory.json"
 PALAVRAS_FILE = "palavras.json"
 TODO_FILE = "todos.json"
 NOTAS_FILE = "notas.json"
+LEMBRETES_FILE = "lembretes.json"
 
 MAX_HISTORY = 500
 CONFIDENCE_THRESHOLD = 0.85
@@ -145,6 +146,10 @@ Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
 - color_convert: converte cor entre #hex e rgb() (params.value).
 - lorem_ipsum: gera texto placeholder (params.paragraphs opcional).
 - resumo_dia: panorama do dia (hora, clima, bateria, tarefas pendentes, notas recentes).
+- noticias: últimas notícias por RSS (params.fonte="g1"|"publico"|"bbc"|"rtp"|"dn"|"tech"|"hackernews"; params.limite opcional).
+- lembrete_add: agenda lembrete (params.texto + params.em_min OU params.quando="HH:MM"|"DD/MM HH:MM"|ISO).
+- lembretes_listar: mostra lembretes ativos com horário e estado.
+- lembrete_excluir: apaga lembrete pelo número da lista (params.idx).
 
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:

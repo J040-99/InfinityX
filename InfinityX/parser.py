@@ -167,6 +167,10 @@ def analisar(entrada: str) -> dict:
             "nota_add": "nota_add", "notas_listar": "notas_listar",
             "nota_excluir": "nota_excluir",
             "resumo_dia": "resumo_dia",
+            "noticias": "noticias",
+            "lembrete_add": "lembrete_add",
+            "lembretes_listar": "lembretes_listar",
+            "lembrete_excluir": "lembrete_excluir",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -344,6 +348,14 @@ def _build_action_table(dec: dict) -> dict:
         "notas_listar": actions.action_notas_listar,
         "nota_excluir": lambda: actions.action_nota_excluir(dec.get("idx", 0)),
         "resumo_dia": actions.action_resumo_dia,
+        "noticias": lambda: actions.action_noticias(
+            dec.get("fonte", "g1"), dec.get("limite", 5)
+        ),
+        "lembrete_add": lambda: actions.action_lembrete_add(
+            dec.get("texto", ""), dec.get("em_min"), dec.get("quando")
+        ),
+        "lembretes_listar": actions.action_lembretes_listar,
+        "lembrete_excluir": lambda: actions.action_lembrete_excluir(dec.get("idx", 0)),
     }
 
 
