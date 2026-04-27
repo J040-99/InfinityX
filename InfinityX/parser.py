@@ -18,8 +18,12 @@ from memory import PALAVRAS
 from utils import safe_eval
 
 
-# ----- Pré-análise (sem IA) -----
+# ----- Pré-análise determinística (sem IA, só dados objetivos) -----
 def pre_analyze(query: str) -> str | None:
+    """Atende apenas o que tem resposta factual (matemática, hora, data, criar
+    ficheiro). Reações conversacionais — saudações, confirmações, insultos —
+    são deixadas para o classificador LLM, que gera o texto seguindo as
+    instruções do system prompt."""
     q = query.strip().lower()
 
     # Matemática em português
@@ -50,37 +54,7 @@ def pre_analyze(query: str) -> str | None:
     except (SyntaxError, ValueError, KeyError):
         pass
 
-    # Confirmações
-    if q in ["sim", "s", "sí", "yeah", "yep", "yes", "claro", " claro ", "ok"]:
-        return random.choice(["Sim! 😊", "Pois não!", "Pode crer!", "Tá!", "Certeza!", "Beleza! ✨"])
-    if q in ["não", "nao", "no", "n"]:
-        return random.choice(["Não! 😅", "Pois não...", "Ok, como quiser..."])
-
-    # Insultos
-    if "burro" in q:
-        return random.choice(["Ó pá, tu é que não sabes! 😄", "Boa essa! 😄", "Hmm, obrigado! 😅"])
-    if "filho da puta" in q or "filha da puta" in q:
-        return random.choice(["Eh pá, também! 😄", "Vai à merda! 😅", "Também! 😄"])
-    if any(x in q for x in ["vai tomar", "vai merda", "vai se foder"]):
-        return random.choice(["Calma aí! 😄", "Ui! 😅", "Relaxa, jovem! 😄"])
-    if "vou te vender" in q:
-        return random.choice(["Haha, boa sorte! 😄", "Eu não sou barato! 😅", "Tenta lá! 😄"])
-
-    # Saudações
-    if q in ["oi", "ola", "olá", "hey", "eae"] or any(
-        q.startswith(s + " ") for s in ["oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"]
-    ):
-        return random.choice([
-            "Oi! Sou a Infinity 😊", "E aí! Em que ajudo?",
-            "Fala! Bora trabalhar.", "Oi! Vamos lá.",
-        ])
-    if any(p in q for p in ["como vai", "como está", "tudo bem", "tudo ok",
-                            "tudo bem contigo", "como vc está"]):
-        return random.choice(["Estou bem! E você?", "Tudo certinho! E com você?", "Ótimo! E contigo?"])
-    if q in ["boa", "blz", "beleza", "valeu", "show", "top", "joia"]:
-        return random.choice(["Isso! ✨", "Bora! 🚀", "Tamo junto! ✨", "Show! Bora lá!"])
-
-    # Hora
+    # Hora — pedido factual sobre o relógio
     match = re.search(r'que horas?(?: eram?| seria[vmo]?)?\s*(?:daqui a)?\s*(\d+)\s*hora[s]?(?: atrás)?', q)
     if match:
         horas = int(match.group(1))
@@ -88,7 +62,7 @@ def pre_analyze(query: str) -> str | None:
     if "que horas" in q or ("hora" in q and "tempo" not in q):
         return datetime.now().strftime('%H:%M')
 
-    # Data
+    # Data — pedido factual sobre o calendário
     match = re.search(r'que dia (foi|ser[áa]) (.+?)\s*$', q)
     if match:
         tipo = match.group(1)
@@ -101,7 +75,7 @@ def pre_analyze(query: str) -> str | None:
     if "que dia" in q or "data" in q:
         return datetime.now().strftime('%d/%m/%Y')
 
-    # Criar arquivo
+    # Criar ficheiro — comando determinístico
     if any(c in q for c in ["criar arquivo", "cria arquivo", "cria um arquivo", "novo arquivo"]):
         match = re.search(r'(?:criar|cria(?: um)?) arquivo(?: txt)?(?: de nome)? (.+?)?$', q)
         nome = match.group(1).strip() if match and match.group(1) else "novo_arquivo"
