@@ -1,10 +1,13 @@
 """Implementação de todas as ações executáveis pelo InfinityX."""
 
+import base64
 import ctypes
+import hashlib
 import json
 import os
 import platform
 import random
+import re
 import secrets
 import shutil
 import socket
@@ -15,6 +18,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import uuid
 import webbrowser
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -29,7 +33,7 @@ from config import (
     SYSTEM_AUTO_AVAILABLE,
     TODO_FILE,
 )
-from memory import MEMORIA, PALAVRAS, TIMERS, salvar_palavras
+from memory import MEMORIA, NOTAS, PALAVRAS, TIMERS, salvar_notas, salvar_palavras
 from utils import categorize_file, get_user_home, resolve_path
 
 if PSUTIL_AVAILABLE:
@@ -660,3 +664,245 @@ def action_window_control(app_name: str, action: str) -> str:
         return "❌ Instale pywinauto para controle de janelas"
     except Exception as e:
         return f"❌ Erro: {e}"
+
+
+# ----- Ferramentas de texto e dados (stdlib) -----
+def action_uuid_gen(count: int = 1) -> str:
+    try:
+        n = max(1, min(int(count), 20))
+    except (TypeError, ValueError):
+        n = 1
+    return "\n".join(str(uuid.uuid4()) for _ in range(n))
+
+
+def action_hash_text(text: str, algo: str = "sha256") -> str:
+    if not text:
+        return "❌ Texto vazio"
+    algo = (algo or "sha256").lower()
+    if algo not in {"md5", "sha1", "sha256", "sha512"}:
+        return f"❌ Algoritmo desconhecido: {algo}"
+    h = hashlib.new(algo, text.encode("utf-8")).hexdigest()
+    return f"{algo}: {h}"
+
+
+def action_base64(text: str, mode: str = "encode") -> str:
+    if not text:
+        return "❌ Texto vazio"
+    try:
+        if (mode or "encode").lower().startswith("dec"):
+            return base64.b64decode(text.encode("utf-8")).decode("utf-8", errors="replace")
+        return base64.b64encode(text.encode("utf-8")).decode("ascii")
+    except (ValueError, UnicodeError) as e:
+        return f"❌ Base64: {e}"
+
+
+def action_url_codec(text: str, mode: str = "encode") -> str:
+    if not text:
+        return "❌ Texto vazio"
+    if (mode or "encode").lower().startswith("dec"):
+        return urllib.parse.unquote(text)
+    return urllib.parse.quote(text, safe="")
+
+
+def action_text_tools(text: str, op: str = "count") -> str:
+    if text is None:
+        return "❌ Texto vazio"
+    op = (op or "count").lower()
+    if op == "count":
+        chars = len(text)
+        chars_no_ws = len(re.sub(r"\s", "", text))
+        words = len(text.split())
+        lines = text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+        return f"📝 {words} palavras · {chars} caracteres ({chars_no_ws} sem espaços) · {lines} linhas"
+    if op == "upper":
+        return text.upper()
+    if op == "lower":
+        return text.lower()
+    if op == "title":
+        return text.title()
+    if op == "reverse":
+        return text[::-1]
+    if op == "trim":
+        return "\n".join(line.strip() for line in text.splitlines())
+    if op == "dedupe":
+        seen, out = set(), []
+        for line in text.splitlines():
+            if line not in seen:
+                seen.add(line)
+                out.append(line)
+        return "\n".join(out)
+    if op == "sort":
+        return "\n".join(sorted(text.splitlines()))
+    return f"❌ Operação desconhecida: {op}"
+
+
+def action_json_format(text: str, indent: int = 2) -> str:
+    if not text:
+        return "❌ Texto vazio"
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        return f"❌ JSON inválido: {e.msg} (linha {e.lineno}, col {e.colno})"
+    return json.dumps(data, ensure_ascii=False, indent=int(indent or 2), sort_keys=False)
+
+
+def action_color_convert(value: str) -> str:
+    if not value:
+        return "❌ Cor vazia"
+    v = value.strip().lower().replace("#", "")
+    if re.fullmatch(r"[0-9a-f]{6}", v):
+        r, g, b = int(v[0:2], 16), int(v[2:4], 16), int(v[4:6], 16)
+        return f"🎨 #{v} → rgb({r}, {g}, {b})"
+    if re.fullmatch(r"[0-9a-f]{3}", v):
+        r, g, b = (int(c * 2, 16) for c in v)
+        return f"🎨 #{v} → rgb({r}, {g}, {b})"
+    m = re.fullmatch(r"rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)", value.strip().lower())
+    if m:
+        r, g, b = (max(0, min(255, int(x))) for x in m.groups())
+        return f"🎨 rgb({r}, {g}, {b}) → #{r:02x}{g:02x}{b:02x}"
+    return "❌ Use #RRGGBB, #RGB ou rgb(r, g, b)"
+
+
+_LOREM_BASE = (
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor "
+    "incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud "
+    "exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute "
+    "irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla "
+    "pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia "
+    "deserunt mollit anim id est laborum."
+)
+
+
+def action_lorem_ipsum(paragraphs: int = 1) -> str:
+    try:
+        n = max(1, min(int(paragraphs), 10))
+    except (TypeError, ValueError):
+        n = 1
+    return "\n\n".join(_LOREM_BASE for _ in range(n))
+
+
+# ----- APIs públicas sem chave -----
+def action_public_ip() -> str:
+    try:
+        with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=6) as resp:
+            data = json.loads(resp.read().decode())
+        return f"🌐 IP público: {data.get('ip', '?')}"
+    except (URLError, OSError, json.JSONDecodeError) as e:
+        return f"❌ Falha ao obter IP: {e}"
+
+
+def action_wikipedia(query: str, lang: str = "pt") -> str:
+    if not query:
+        return "❌ Sem termo para procurar"
+    lang = (lang or "pt").lower()
+    title = urllib.parse.quote(query.strip().replace(" ", "_"))
+    url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{title}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+    except (URLError, OSError, json.JSONDecodeError) as e:
+        return f"❌ Wikipedia: {e}"
+    if data.get("type") == "disambiguation":
+        return f"🔎 '{query}' é ambíguo na Wikipedia. Tenta ser mais específico."
+    extract = data.get("extract") or "Sem resumo disponível."
+    page = data.get("content_urls", {}).get("desktop", {}).get("page", "")
+    return f"📚 {data.get('title', query)}\n{extract}" + (f"\n🔗 {page}" if page else "")
+
+
+_CRYPTO_ALIASES = {
+    "btc": "bitcoin", "eth": "ethereum", "sol": "solana", "ada": "cardano",
+    "doge": "dogecoin", "xrp": "ripple", "bnb": "binancecoin", "ltc": "litecoin",
+    "matic": "polygon", "dot": "polkadot",
+}
+
+
+def action_crypto_price(coin: str = "bitcoin", currency: str = "usd") -> str:
+    coin_id = _CRYPTO_ALIASES.get((coin or "").lower(), (coin or "bitcoin").lower())
+    cur = (currency or "usd").lower()
+    url = (
+        "https://api.coingecko.com/api/v3/simple/price"
+        f"?ids={urllib.parse.quote(coin_id)}&vs_currencies={urllib.parse.quote(cur)}"
+        "&include_24hr_change=true"
+    )
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+    except (URLError, OSError, json.JSONDecodeError) as e:
+        return f"❌ CoinGecko: {e}"
+    info = data.get(coin_id)
+    if not info or cur not in info:
+        return f"❌ Não encontrei {coin_id} em {cur.upper()}"
+    price = info[cur]
+    change = info.get(f"{cur}_24h_change")
+    arrow = "📈" if (change or 0) >= 0 else "📉"
+    extra = f" {arrow} {change:+.2f}% (24h)" if change is not None else ""
+    return f"💰 {coin_id.title()}: {price:,.2f} {cur.upper()}{extra}"
+
+
+# ----- Notas pessoais -----
+def action_nota_add(texto: str) -> str:
+    if not texto or not texto.strip():
+        return "❌ Nota vazia"
+    NOTAS.append({"texto": texto.strip(), "ts": datetime.now().isoformat(timespec="seconds")})
+    salvar_notas()
+    return f"📝 Nota guardada (#{len(NOTAS)})"
+
+
+def action_notas_listar() -> str:
+    if not NOTAS:
+        return "📭 Sem notas guardadas"
+    linhas = []
+    for i, n in enumerate(NOTAS, 1):
+        ts = n.get("ts", "")[:16].replace("T", " ")
+        linhas.append(f"{i}. [{ts}] {n.get('texto', '')}")
+    return "📒 Notas:\n" + "\n".join(linhas)
+
+
+def action_nota_excluir(idx: int) -> str:
+    try:
+        i = int(idx) - 1
+    except (TypeError, ValueError):
+        return "❌ Índice inválido"
+    if not (0 <= i < len(NOTAS)):
+        return f"❌ Não existe nota #{idx}"
+    removida = NOTAS.pop(i)
+    salvar_notas()
+    return f"🗑️ Removida: {removida.get('texto', '')[:60]}"
+
+
+# ----- Resumo do dia -----
+def action_resumo_dia() -> str:
+    partes = [f"📅 {datetime.now().strftime('%A, %d/%m/%Y · %H:%M')}"]
+    try:
+        clima = action_clima(None, False)
+        if clima and not clima.startswith("❌"):
+            partes.append(clima)
+    except Exception:
+        pass
+    try:
+        if PSUTIL_AVAILABLE:
+            bat = action_battery_status()
+            if bat and not bat.startswith("❌"):
+                partes.append(bat)
+    except Exception:
+        pass
+    try:
+        if os.path.exists(TODO_FILE):
+            with open(TODO_FILE, "r", encoding="utf-8") as f:
+                todos = json.load(f)
+            pendentes = [t for t in todos if not t.get("done")]
+            if pendentes:
+                top = pendentes[:5]
+                partes.append("✅ Pendentes:\n" + "\n".join(f" • {t.get('task','')}" for t in top))
+            else:
+                partes.append("✅ Sem tarefas pendentes")
+    except (IOError, json.JSONDecodeError):
+        pass
+    if NOTAS:
+        ultimas = NOTAS[-3:]
+        partes.append("📝 Notas recentes:\n" + "\n".join(
+            f" • {n.get('texto', '')[:80]}" for n in ultimas
+        ))
+    return "\n\n".join(partes)

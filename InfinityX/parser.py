@@ -158,6 +158,15 @@ def analisar(entrada: str) -> dict:
             "type_text": "type_text", "press_key": "press_key",
             "click": "click", "window_control": "window_control",
             "buscar": "conhecimento",
+            "uuid_gen": "uuid_gen", "hash_text": "hash_text",
+            "base64": "base64", "url_codec": "url_codec",
+            "text_tools": "text_tools", "json_format": "json_format",
+            "color_convert": "color_convert", "lorem_ipsum": "lorem_ipsum",
+            "public_ip": "public_ip", "wikipedia": "wikipedia",
+            "crypto_price": "crypto_price",
+            "nota_add": "nota_add", "notas_listar": "notas_listar",
+            "nota_excluir": "nota_excluir",
+            "resumo_dia": "resumo_dia",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -214,15 +223,30 @@ AJUDA_TEXTO = """👩 Infinity - Sua Assistente Pessoal
 📚 Dicionário pessoal:
 • 'aprende [palavra] = [significado]'
 • 'o que é [palavra]?'
-• 'lista palavras'
-• 'esquece [palavra]'
+• 'lista palavras' • 'esquece [palavra]'
 
-🛠️ Comandos úteis:
+📝 Notas:
+• 'anota [texto]' • 'minhas notas' • 'apaga nota [n]'
+
+🛠️ Sistema e ficheiros:
 • clima [cidade] • hora • sysinfo • bateria
-• abre [app/site] • busca [termo]
-• organiza [pasta] • lista [pasta]
+• rede • espaço em disco • ip público
+• abre [app/site] • organiza [pasta] • lista [pasta]
+• gera senha • timer [minutos] • screenshot
+
+🌐 Pesquisa:
+• wikipedia [termo] • busca [termo]
+• cotação [btc/eth/...] • cotação dólar/euro
+
+🔧 Ferramentas para devs:
+• gera uuid • hash [texto] • base64 [texto]
+• url encode [texto] • formata json [texto]
+• converte cor #ff8800 • lorem 3
+
+✨ Outros:
 • matemática: '2+2', '5 vezes 10'
-• gera senha • timer [minutos]
+• tradução • bmi • dados/moeda
+• 'resumo do dia'
 
 💡 Basta pedir naturalmente!"""
 
@@ -291,6 +315,35 @@ def _build_action_table(dec: dict) -> dict:
         "window_control": lambda: actions.action_window_control(
             dec.get("app", ""), dec.get("action", "")
         ),
+        "uuid_gen": lambda: actions.action_uuid_gen(dec.get("count", 1)),
+        "hash_text": lambda: actions.action_hash_text(
+            dec.get("text", ""), dec.get("algo", "sha256")
+        ),
+        "base64": lambda: actions.action_base64(
+            dec.get("text", ""), dec.get("mode", "encode")
+        ),
+        "url_codec": lambda: actions.action_url_codec(
+            dec.get("text", ""), dec.get("mode", "encode")
+        ),
+        "text_tools": lambda: actions.action_text_tools(
+            dec.get("text", ""), dec.get("op", "count")
+        ),
+        "json_format": lambda: actions.action_json_format(
+            dec.get("text", ""), dec.get("indent", 2)
+        ),
+        "color_convert": lambda: actions.action_color_convert(dec.get("value", "")),
+        "lorem_ipsum": lambda: actions.action_lorem_ipsum(dec.get("paragraphs", 1)),
+        "public_ip": actions.action_public_ip,
+        "wikipedia": lambda: actions.action_wikipedia(
+            dec.get("query", ""), dec.get("lang", "pt")
+        ),
+        "crypto_price": lambda: actions.action_crypto_price(
+            dec.get("coin", "bitcoin"), dec.get("currency", "usd")
+        ),
+        "nota_add": lambda: actions.action_nota_add(dec.get("texto", "")),
+        "notas_listar": actions.action_notas_listar,
+        "nota_excluir": lambda: actions.action_nota_excluir(dec.get("idx", 0)),
+        "resumo_dia": actions.action_resumo_dia,
     }
 
 

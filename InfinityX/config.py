@@ -16,6 +16,7 @@ LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1/chat/comple
 MEMORIA_FILE = "memory.json"
 PALAVRAS_FILE = "palavras.json"
 TODO_FILE = "todos.json"
+NOTAS_FILE = "notas.json"
 
 MAX_HISTORY = 500
 CONFIDENCE_THRESHOLD = 0.85
@@ -131,6 +132,19 @@ Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
 - translate / convert / currency_convert / generate_password / generate_qr / shorten_url / random_dice / random_coin / random_number / ping / bmi: utilitários.
 - todo_add / todo_list / timer_set: produtividade pessoal.
 - palavras_aprender / palavras_procurar / palavras_listar / palavras_excluir: dicionário pessoal do utilizador.
+- nota_add / notas_listar / nota_excluir: bloco de notas pessoal (usa params.texto para criar, params.idx para apagar).
+- wikipedia: resumo factual de um termo via Wikipedia (params.query, opcional params.lang="pt").
+- public_ip: devolve o IP público do utilizador.
+- crypto_price: cotação de criptomoeda (params.coin="bitcoin"|"eth"|...; params.currency="usd"|"eur"|"brl").
+- uuid_gen: gera UUIDs (params.count opcional).
+- hash_text: calcula hash de texto (params.text, params.algo="md5"|"sha1"|"sha256"|"sha512").
+- base64: codifica/descodifica base64 (params.text, params.mode="encode"|"decode").
+- url_codec: percent-encoding de URLs (params.text, params.mode="encode"|"decode").
+- text_tools: análise/transformação de texto (params.text, params.op="count"|"upper"|"lower"|"title"|"reverse"|"trim"|"dedupe"|"sort").
+- json_format: formata/valida JSON colado (params.text, params.indent opcional).
+- color_convert: converte cor entre #hex e rgb() (params.value).
+- lorem_ipsum: gera texto placeholder (params.paragraphs opcional).
+- resumo_dia: panorama do dia (hora, clima, bateria, tarefas pendentes, notas recentes).
 
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:
