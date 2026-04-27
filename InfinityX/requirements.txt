@@ -1,0 +1,17 @@
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+psutil>=5.9.0
+pyperclip>=1.8.2
+
+pyautogui>=0.9.54
+
+selenium>=4.15.0
+webdriver-manager>=4.0.0
+googlesearch-python>=1.2.3
+
+pyttsx3>=2.90
+deep-translator>=1.11.4
+qrcode[pil]>=7.4.2
+
+pywinauto>=0.6.8 ; sys_platform == "win32"

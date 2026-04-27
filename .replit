@@ -1,2 +1,26 @@
+modules = ["python-3.11"]
 [agent]
 expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Smoke test"
+
+[[workflows.workflow]]
+name = "Smoke test"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd InfinityX && python -c \"import config, memory, utils, llm, actions, parser, infinityx; print('InfinityX modulos importam OK'); print('Acoes registradas:', sum(1 for n in dir(actions) if n.startswith('action_')))\""
+
+[workflows.workflow.metadata]
+outputType = "console"
