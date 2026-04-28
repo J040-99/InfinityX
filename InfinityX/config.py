@@ -11,6 +11,8 @@ except ImportError:
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
+LASTFM_API_KEY = os.getenv("LASTFM_API_KEY", "")
+LASTFM_USERNAME = os.getenv("LASTFM_USERNAME", "")
 LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 
 MEMORIA_FILE = "memory.json"
@@ -158,6 +160,13 @@ Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
 - yt_music_artist: abre a página do artista (params.nome).
 - yt_music_recommendations: descobertas (sem params) ou parecidas a uma música (params.seed).
 - youtube_music: continua a tocar shuffle aleatório no YT Music (sem params).
+- yt_music_radio: rádio infinita baseada numa música (params.seed="nome da música/artista").
+- lastfm_now_playing: o que o utilizador Last.fm está a ouvir (params.user opcional, usa LASTFM_USERNAME).
+- lastfm_recent: histórico recente (params.user opcional, params.limite opcional).
+- lastfm_top: top do utilizador (params.user opcional; params.kind="artists"|"tracks"|"albums"; params.period="overall"|"7day"|"1month"|"3month"|"6month"|"12month"; params.limite opcional).
+- lastfm_similar_artist: artistas semelhantes (params.artista, params.limite opcional).
+- lastfm_similar_track: músicas semelhantes (params.artista, params.track, params.limite opcional).
+- lastfm_artist_info: bio e estatísticas de um artista (params.artista).
 
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:

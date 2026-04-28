@@ -214,6 +214,34 @@ def action_yt_music_artist(nome: str) -> str:
     return f"🔍 Artista: {q}"
 
 
+def action_yt_music_radio(seed: str) -> str:
+    """Abre uma rádio infinita no YT Music a partir de uma música."""
+    if not seed or not seed.strip():
+        return "❌ Diz a música base para a rádio"
+    q = seed.strip()
+    yt = _yt()
+    if yt:
+        try:
+            results = yt.search(q, filter="songs", limit=1)
+            if results:
+                top = results[0]
+                video_id = top.get("videoId")
+                titulo = top.get("title", q)
+                if video_id:
+                    url = (
+                        f"https://music.youtube.com/watch?v={video_id}"
+                        f"&list=RDAMVM{video_id}"
+                    )
+                    webbrowser.open_new_tab(url)
+                    return f"📻 Rádio baseada em: {titulo}"
+        except Exception:
+            pass
+    webbrowser.open_new_tab(
+        f"https://music.youtube.com/search?q={urllib.parse.quote(q)}"
+    )
+    return f"🔍 YT Music: {q} (rádio precisa de ytmusicapi)"
+
+
 def action_yt_music_recommendations(seed: str | None = None, limite: int = 8) -> str:
     """Devolve recomendações; se for dado um termo, baseia-se nele,
     senão usa a homepage de descobertas do YT Music."""

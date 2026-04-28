@@ -21,6 +21,14 @@ from .midia import (
     action_type_text,
     action_window_control,
 )
+from .lastfm import (
+    action_lastfm_artist_info,
+    action_lastfm_now_playing,
+    action_lastfm_recent,
+    action_lastfm_similar_artist,
+    action_lastfm_similar_track,
+    action_lastfm_top,
+)
 from .musica import (
     action_media_mute,
     action_media_next,
@@ -33,6 +41,7 @@ from .musica import (
     action_yt_music_artist,
     action_yt_music_play,
     action_yt_music_playlist,
+    action_yt_music_radio,
     action_yt_music_recommendations,
     action_yt_music_search,
 )

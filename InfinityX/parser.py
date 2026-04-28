@@ -183,6 +183,13 @@ def analisar(entrada: str) -> dict:
             "yt_music_playlist": "yt_music_playlist",
             "yt_music_artist": "yt_music_artist",
             "yt_music_recommendations": "yt_music_recommendations",
+            "yt_music_radio": "yt_music_radio",
+            "lastfm_now_playing": "lastfm_now_playing",
+            "lastfm_recent": "lastfm_recent",
+            "lastfm_top": "lastfm_top",
+            "lastfm_similar_artist": "lastfm_similar_artist",
+            "lastfm_similar_track": "lastfm_similar_track",
+            "lastfm_artist_info": "lastfm_artist_info",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -383,6 +390,24 @@ def _build_action_table(dec: dict) -> dict:
         "yt_music_artist": lambda: actions.action_yt_music_artist(dec.get("nome", "")),
         "yt_music_recommendations": lambda: actions.action_yt_music_recommendations(
             dec.get("seed"), dec.get("limite", 8)
+        ),
+        "yt_music_radio": lambda: actions.action_yt_music_radio(dec.get("seed", "")),
+        "lastfm_now_playing": lambda: actions.action_lastfm_now_playing(dec.get("user")),
+        "lastfm_recent": lambda: actions.action_lastfm_recent(
+            dec.get("user"), dec.get("limite", 10)
+        ),
+        "lastfm_top": lambda: actions.action_lastfm_top(
+            dec.get("user"), dec.get("kind", "artists"),
+            dec.get("period", "overall"), dec.get("limite", 10)
+        ),
+        "lastfm_similar_artist": lambda: actions.action_lastfm_similar_artist(
+            dec.get("artista", ""), dec.get("limite", 10)
+        ),
+        "lastfm_similar_track": lambda: actions.action_lastfm_similar_track(
+            dec.get("artista", ""), dec.get("track", ""), dec.get("limite", 10)
+        ),
+        "lastfm_artist_info": lambda: actions.action_lastfm_artist_info(
+            dec.get("artista", "")
         ),
     }
 
