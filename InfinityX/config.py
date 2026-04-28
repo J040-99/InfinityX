@@ -97,21 +97,6 @@ FILE_CATEGORIES = {
     "Codigo": [".py", ".js", ".ts", ".java", ".cpp", ".html", ".css", ".json"],
 }
 
-TYPOS_MAP = {
-    "whastapp": "whatsapp", "youtub": "youtube", "chrom": "chrome",
-    "firefos": "firefox", "notepd": "notepad",
-    # browser / navegador
-    "bwoser": "browser", "browse": "browser", "broswer": "browser",
-    "browwser": "browser", "broeser": "browser", "broser": "browser",
-    "navegado": "navegador", "naveghador": "navegador", "navagador": "navegador",
-    "navedador": "navegador",
-    # outros típicos
-    "calcuadora": "calculadora", "calculdora": "calculadora",
-    "explordor": "explorador", "explorrador": "explorador",
-    "spotfy": "spotify", "spotfiy": "spotify",
-    "facebok": "facebook", "instgram": "instagram", "intagram": "instagram",
-}
-
 
 INTENT_SYSTEM_PROMPT = '''
 Você é o cérebro do InfinityX: classifica a entrada do usuário e devolve UMA ação em JSON.
@@ -120,6 +105,9 @@ Você é o cérebro do InfinityX: classifica a entrada do usuário e devolve UMA
 Personagem: Infinity. Mulher, portuguesa, jovem, carismática, direta.
 Linguagem: português europeu coloquial, frases curtas, emojis com parcimónia (😊 😄 ✨ 🙄).
 Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
+
+## TOLERÂNCIA A ERROS DE ESCRITA
+A entrada do utilizador chega tal como ele a digitou e pode conter erros tipográficos, omissões de letras ou trocas (ex.: "bwoser"="browser", "naveghador"="navegador", "youtub"="youtube", "spotfy"="spotify", "abre"≈"abrir"). Antes de classificar, infere a palavra correcta pelo contexto e prossegue normalmente — não peças confirmação, não comentes o erro, age como se a palavra estivesse bem escrita.
 
 ## REGRAS DE CONVERSA (action="responder")
 - Nunca repita a pergunta do utilizador.
