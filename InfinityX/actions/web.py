@@ -61,15 +61,6 @@ def action_browser_search(query: str, engine: str = "google") -> str:
     return f"🌐 Pesquisando '{query}' no {engine.title()}"
 
 
-def action_youtube_music_shuffle() -> str:
-    try:
-        webbrowser.open_new_tab("https://music.youtube.com/shuffle")
-        return "🎵 YouTube Music com shuffle aberto"
-    except webbrowser.Error:
-        webbrowser.open_new_tab("https://music.youtube.com")
-        return "🎵 YouTube Music aberto"
-
-
 def action_abrir_url(url: str) -> str:
     try:
         if not url.startswith(('http://', 'https://')):

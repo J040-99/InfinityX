@@ -24,3 +24,6 @@ args = "cd InfinityX && python -c \"import config, memory, utils, llm, actions, 
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[nix]
+channel = "stable-25_05"

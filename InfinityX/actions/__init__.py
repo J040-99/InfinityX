@@ -21,6 +21,21 @@ from .midia import (
     action_type_text,
     action_window_control,
 )
+from .musica import (
+    action_media_mute,
+    action_media_next,
+    action_media_play_pause,
+    action_media_previous,
+    action_media_stop,
+    action_media_volume_down,
+    action_media_volume_up,
+    action_youtube_music_shuffle,
+    action_yt_music_artist,
+    action_yt_music_play,
+    action_yt_music_playlist,
+    action_yt_music_recommendations,
+    action_yt_music_search,
+)
 from .produtividade import (
     action_lembrete_add,
     action_lembrete_excluir,
@@ -73,5 +88,4 @@ from .web import (
     action_noticias,
     action_public_ip,
     action_wikipedia,
-    action_youtube_music_shuffle,
 )

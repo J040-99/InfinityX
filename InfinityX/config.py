@@ -150,6 +150,14 @@ Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
 - lembrete_add: agenda lembrete (params.texto + params.em_min OU params.quando="HH:MM"|"DD/MM HH:MM"|ISO).
 - lembretes_listar: mostra lembretes ativos com horário e estado.
 - lembrete_excluir: apaga lembrete pelo número da lista (params.idx).
+- media_play_pause / media_next / media_previous / media_stop / media_mute: controlo OS-wide do player de média activo (Spotify, YT Music, etc.). Sem params.
+- media_volume_up / media_volume_down: sobe/desce volume (params.steps opcional, default 3).
+- yt_music_play: procura no YouTube Music e toca a primeira música (params.query).
+- yt_music_search: lista resultados no terminal (params.query; params.tipo="songs"|"videos"|"albums"|"artists"|"playlists"; params.limite opcional).
+- yt_music_playlist: abre a primeira playlist correspondente (params.nome).
+- yt_music_artist: abre a página do artista (params.nome).
+- yt_music_recommendations: descobertas (sem params) ou parecidas a uma música (params.seed).
+- youtube_music: continua a tocar shuffle aleatório no YT Music (sem params).
 
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:

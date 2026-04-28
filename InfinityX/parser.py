@@ -171,6 +171,18 @@ def analisar(entrada: str) -> dict:
             "lembrete_add": "lembrete_add",
             "lembretes_listar": "lembretes_listar",
             "lembrete_excluir": "lembrete_excluir",
+            "media_play_pause": "media_play_pause",
+            "media_next": "media_next",
+            "media_previous": "media_previous",
+            "media_stop": "media_stop",
+            "media_volume_up": "media_volume_up",
+            "media_volume_down": "media_volume_down",
+            "media_mute": "media_mute",
+            "yt_music_play": "yt_music_play",
+            "yt_music_search": "yt_music_search",
+            "yt_music_playlist": "yt_music_playlist",
+            "yt_music_artist": "yt_music_artist",
+            "yt_music_recommendations": "yt_music_recommendations",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -356,6 +368,22 @@ def _build_action_table(dec: dict) -> dict:
         ),
         "lembretes_listar": actions.action_lembretes_listar,
         "lembrete_excluir": lambda: actions.action_lembrete_excluir(dec.get("idx", 0)),
+        "media_play_pause": actions.action_media_play_pause,
+        "media_next": actions.action_media_next,
+        "media_previous": actions.action_media_previous,
+        "media_stop": actions.action_media_stop,
+        "media_volume_up": lambda: actions.action_media_volume_up(dec.get("steps", 3)),
+        "media_volume_down": lambda: actions.action_media_volume_down(dec.get("steps", 3)),
+        "media_mute": actions.action_media_mute,
+        "yt_music_play": lambda: actions.action_yt_music_play(dec.get("query", "")),
+        "yt_music_search": lambda: actions.action_yt_music_search(
+            dec.get("query", ""), dec.get("tipo", "songs"), dec.get("limite", 5)
+        ),
+        "yt_music_playlist": lambda: actions.action_yt_music_playlist(dec.get("nome", "")),
+        "yt_music_artist": lambda: actions.action_yt_music_artist(dec.get("nome", "")),
+        "yt_music_recommendations": lambda: actions.action_yt_music_recommendations(
+            dec.get("seed"), dec.get("limite", 8)
+        ),
     }
 
 
