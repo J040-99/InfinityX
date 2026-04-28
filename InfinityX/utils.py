@@ -7,8 +7,13 @@ from pathlib import Path
 from config import FILE_CATEGORIES, FOLDER_ALIASES
 
 
-def safe_eval(expr: str) -> float:
-    """Parser de matemática seguro - usa eval() com validação restritiva."""
+def safe_eval(expr: str):
+    """Parser de matemática seguro - usa eval() com validação restritiva.
+
+    Devolve int quando o resultado é inteiro exato; caso contrário float.
+    Isto evita coisas como "2 - 10000000000000000" perder precisão e mostrar
+    -9999999999999998.0 em vez de -9999999999999998.
+    """
     if not re.match(r'^[\d\s+\-*/.()%]+$', expr):
         raise ValueError(f"Expressão inválida: {expr}")
     allowed_globals = {"__builtins__": {}}
@@ -18,7 +23,9 @@ def safe_eval(expr: str) -> float:
         raise ValueError(f"Expressão inválida: {expr}") from e
     if not isinstance(result, (int, float)):
         raise ValueError("Resultado não é número")
-    return float(result)
+    if isinstance(result, float) and result.is_integer():
+        return int(result)
+    return result
 
 
 def get_user_home() -> Path:

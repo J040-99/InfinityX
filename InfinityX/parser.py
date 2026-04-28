@@ -62,18 +62,44 @@ def pre_analyze(query: str) -> str | None:
     if "que horas" in q or ("hora" in q and "tempo" not in q):
         return datetime.now().strftime('%H:%M')
 
-    # Data — pedido factual sobre o calendário
-    match = re.search(r'que dia (foi|ser[áa]) (.+?)\s*$', q)
-    if match:
-        tipo = match.group(1)
-        num_match = re.search(r'(\d+)', match.group(2))
-        if num_match and "dia" in match.group(2):
-            num = int(num_match.group(1))
-            if tipo.startswith("foi"):
-                return (datetime.now() - timedelta(days=num)).strftime('%d/%m/%Y')
-            return (datetime.now() + timedelta(days=num)).strftime('%d/%m/%Y')
-    if "que dia" in q or "data" in q:
-        return datetime.now().strftime('%d/%m/%Y')
+    # Data — só responde se for um pedido factual GENÉRICO sobre o calendário.
+    # Perguntas pessoais ("que dia eu nasci?", "que dia faço anos?", "que dia
+    # foi o casamento?") NÃO devem ser respondidas com a data de hoje — são
+    # encaminhadas ao LLM/fallback que pede contexto ao utilizador.
+    PERSONAL_MARKERS = (
+        " eu ", " meu ", " minha ", " nasci", "faço anos", "faco anos",
+        "fiz anos", "aniversário", "aniversario", "casamento", "casei",
+        "te conheci", "nos conhecemos", "começamos", "comecamos",
+    )
+    is_personal = any(m in f" {q} " for m in PERSONAL_MARKERS)
+
+    if not is_personal:
+        # Datas relativas determinísticas
+        if re.search(r'\bantes\s*de\s*ontem\b|\banteontem\b', q):
+            return (datetime.now() - timedelta(days=2)).strftime('%d/%m/%Y')
+        if re.search(r'\bontem\b', q) and "que dia" in q:
+            return (datetime.now() - timedelta(days=1)).strftime('%d/%m/%Y')
+        if re.search(r'\bdepois\s*de\s*amanh[ãa]\b', q):
+            return (datetime.now() + timedelta(days=2)).strftime('%d/%m/%Y')
+        if re.search(r'\bamanh[ãa]\b', q) and "que dia" in q:
+            return (datetime.now() + timedelta(days=1)).strftime('%d/%m/%Y')
+
+        # "que dia foi/será há/daqui a N dias"
+        match = re.search(r'que dia (foi|ser[áa]) (.+?)\s*$', q)
+        if match:
+            tipo = match.group(1)
+            num_match = re.search(r'(\d+)', match.group(2))
+            if num_match and "dia" in match.group(2):
+                num = int(num_match.group(1))
+                if tipo.startswith("foi"):
+                    return (datetime.now() - timedelta(days=num)).strftime('%d/%m/%Y')
+                return (datetime.now() + timedelta(days=num)).strftime('%d/%m/%Y')
+
+        # Pedido genérico sobre a data de hoje
+        if re.search(r'\b(que dia (é|e) hoje|que data (é|e) hoje|data de hoje|dia de hoje|hoje (é|e) que dia|qual (é|e) (a )?data|que dia (é|e))\b', q):
+            return datetime.now().strftime('%d/%m/%Y')
+        if re.fullmatch(r'\s*(data|hoje)\s*\??', q):
+            return datetime.now().strftime('%d/%m/%Y')
 
     # Criar ficheiro — comando determinístico
     if any(c in q for c in ["criar arquivo", "cria arquivo", "cria um arquivo", "novo arquivo"]):
@@ -194,6 +220,7 @@ def analisar(entrada: str) -> dict:
             "lastfm_logout": "lastfm_logout",
             "lastfm_scrobble": "lastfm_scrobble",
             "lastfm_now_playing_set": "lastfm_now_playing_set",
+            "resumo_conversa": "resumo_conversa",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -219,11 +246,20 @@ def analisar(entrada: str) -> dict:
     if "espaço" in e and ("livre" in e or "disco" in e or "pc" in e or " hd" in e or "ssd" in e):
         return {"action": "disk_usage"}
 
-    apps_conhecidos = ["chrome", "firefox", "edge", "notepad", "calc", "explorer"]
+    apps_conhecidos = [
+        "chrome", "firefox", "edge", "notepad", "calc", "explorer",
+        "browser", "navegador", "internet",
+    ]
     if any(a in e for a in ["abre", "abrir", "abra"]) and any(app in e for app in apps_conhecidos):
         app = next((a for a in apps_conhecidos if a in e), None)
         if app:
             return {"action": "abrir", "app": app}
+
+    # Resumo da conversa actual — não é factual nem precisa de LLM externo,
+    # construímos a partir do histórico em memória.
+    if re.search(r'\b(resum[oae]|resumir|sintese|síntese)\b.*\b(conversa|di[áa]logo|chat|hist[óo]rico)\b', e) \
+       or re.search(r'\b(conversa|di[áa]logo|chat|hist[óo]rico)\b.*\b(resum[oae]|resumir|sintese|síntese)\b', e):
+        return {"action": "resumo_conversa"}
 
     if re.match(r'^[\d\s+\-*/.()%?!.]+$', e) and any(op in e for op in '+-*/'):
         return {"action": "matematica", "expr": e.rstrip('?.!')}
@@ -273,15 +309,36 @@ AJUDA_TEXTO = """👩 Infinity - Sua Assistente Pessoal
 ✨ Outros:
 • matemática: '2+2', '5 vezes 10'
 • tradução • bmi • dados/moeda
-• 'resumo do dia'
+• 'resumo do dia' • 'resumo da conversa'
 
 💡 Basta pedir naturalmente!"""
+
+
+def _resumo_conversa() -> str:
+    """Resumo da conversa actual a partir do histórico em memória."""
+    from memory import MEMORIA  # import local para evitar ciclos
+
+    hist = MEMORIA.get("historico") or []
+    if not hist:
+        return "📭 Ainda não tivemos conversa para resumir."
+    ultimas = hist[-15:]
+    linhas = [f"📋 Resumo das últimas {len(ultimas)} interações:"]
+    for h in ultimas:
+        ent = (h.get("ent") or "").strip().replace("\n", " ")
+        res = (h.get("res") or "").strip().replace("\n", " ")
+        if len(ent) > 80:
+            ent = ent[:77] + "..."
+        if len(res) > 100:
+            res = res[:97] + "..."
+        linhas.append(f"• Tu: {ent}\n  Eu: {res}")
+    return "\n".join(linhas)
 
 
 def _build_action_table(dec: dict) -> dict:
     return {
         "responder": lambda: dec.get("texto", ""),
         "matematica": lambda: str(safe_eval(dec.get("expr", "0"))),
+        "resumo_conversa": _resumo_conversa,
         "hora": actions.action_hora,
         "clima": lambda: actions.action_clima(dec.get("cidade"), dec.get("amanha", False)),
         "sysinfo": actions.action_sysinfo,

@@ -17,6 +17,16 @@ def action_abrir(app: str) -> str:
         partes = app_lower.split()
         app_base = partes[0] if partes else app_lower
 
+        # Aliases genéricos: "browser", "navegador", "internet" → abre o
+        # navegador padrão do sistema na página inicial do Google.
+        navegador_aliases = {"browser", "navegador", "internet", "navegar", "google"}
+        if app_base in navegador_aliases or app_lower in navegador_aliases:
+            try:
+                webbrowser.open_new_tab("https://www.google.com")
+                return "🌐 Abrindo o navegador"
+            except webbrowser.Error:
+                pass
+
         apps_desktop = {"chrome", "firefox", "edge", "notepad", "calc", "explorer", "cmd", "powershell"}
         if app_base in apps_desktop:
             try:
