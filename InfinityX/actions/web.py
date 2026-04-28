@@ -68,42 +68,64 @@ def action_browser_search(query: str, engine: str = "google") -> str:
         MEMORIA["ultima_pesquisa"] = query
     
     try:
-        # 1. Pesquisa inicial para obter URLs
+        # 1. Pesquisa inicial para obter URLs usando DuckDuckGo HTML
         url_pesquisa = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
         req = urllib.request.Request(url_pesquisa, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         })
         with urllib.request.urlopen(req, timeout=10) as resp:
             html_pesquisa = resp.read().decode("utf-8", errors="ignore")
         
         import re
-        # Extrair URLs dos resultados
+        # Extrair URLs dos resultados - múltiplos padrões para maior robustez
         urls = []
-        url_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result__url"'
-        for match in re.finditer(url_pattern, html_pesquisa):
+        
+        # Padrão 1: links normais nos resultados
+        link_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*>'
+        for match in re.finditer(link_pattern, html_pesquisa):
             url = match.group(1)
-            if url not in urls and len(urls) < 3:  # Pegar até 3 URLs
+            # Filtrar URLs válidas (excluir duckduckgo, loops, etc.)
+            if ('duckduckgo' not in url and 
+                'http' in url and 
+                len(url) > 10 and 
+                url not in urls and 
+                len(urls) < 5):
                 urls.append(url)
         
-        # Fallback: tentar extrair de links normais se não achar urls específicas
-        if not urls:
-            link_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*>'
-            for match in re.finditer(link_pattern, html_pesquisa):
-                url = match.group(1)
-                if 'duckduckgo' not in url and url not in urls and len(urls) < 3:
+        # Se ainda não temos URLs, tentar buscar por domínios comuns
+        if len(urls) < 3:
+            domain_pattern = r'(https?://(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:/[^\s"\'<>]*)?)'
+            for match in re.finditer(domain_pattern, html_pesquisa):
+                url = match.group(1).rstrip('">')
+                if ('duckduckgo' not in url and 
+                    url not in urls and 
+                    len(urls) < 5):
                     urls.append(url)
+        
+        # Fallback final: construir URLs de busca do Google se nada funcionar
+        if not urls:
+            # Extrair termos da query e criar URLs prováveis
+            termos = query.lower().split()[:5]
+            fallback_urls = [
+                f"https://pt.wikipedia.org/wiki/{'_'.join(termos)}",
+                f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+            ]
+            urls = fallback_urls[:3]
         
         if not urls:
             return f"❌ Não consegui obter resultados para '{query}'"
         
-        # 2. Fazer scraping do conteúdo de cada URL
+        # 2. Fazer scraping do conteúdo de cada URL com timeout maior e tratamento robusto
         conteudos = []
         for url in urls:
             try:
                 req_url = urllib.request.Request(url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
+                    "Connection": "keep-alive"
                 })
-                with urllib.request.urlopen(req_url, timeout=8) as resp_url:
+                with urllib.request.urlopen(req_url, timeout=15) as resp_url:
                     html_content = resp_url.read().decode("utf-8", errors="ignore")
                 
                 # Extrair texto principal usando BeautifulSoup
@@ -111,13 +133,13 @@ def action_browser_search(query: str, engine: str = "google") -> str:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(html_content, 'html.parser')
                     
-                    # Remover scripts, styles, nav, footer, header
-                    for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+                    # Remover scripts, styles, nav, footer, header, aside
+                    for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'advertisement']):
                         tag.decompose()
                     
                     # Tentar encontrar conteúdo principal
                     main_content = None
-                    for tag_id in ['main', 'content', 'article', 'post']:
+                    for tag_id in ['main', 'content', 'article', 'post', 'entry']:
                         main_tag = soup.find(id=tag_id) or soup.find(class_=tag_id)
                         if main_tag:
                             main_content = main_tag
@@ -130,10 +152,18 @@ def action_browser_search(query: str, engine: str = "google") -> str:
                     else:
                         text = main_content.get_text(separator='\n', strip=True)
                     
-                    # Limitar tamanho do texto (máx 3000 caracteres por página)
-                    if len(text) > 3000:
-                        text = text[:3000] + "..."
+                    # Limitar tamanho do texto (máx 4000 caracteres por página para mais contexto)
+                    if len(text) > 4000:
+                        text = text[:4000] + "..."
                     
+                    if text.strip() and len(text) > 100:  # Só adicionar se tiver conteúdo relevante
+                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
+                except ImportError:
+                    # BeautifulSoup não disponível, usar método básico
+                    text = re.sub(r'<[^>]+>', '\n', html_content)
+                    text = re.sub(r'\n\s*\n', '\n\n', text)
+                    paragraphs = [p.strip() for p in text.split('\n') if len(p) > 100]
+                    text = '\n'.join(paragraphs[:30])
                     if text.strip():
                         conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
                 except Exception as e_bs:
@@ -146,6 +176,7 @@ def action_browser_search(query: str, engine: str = "google") -> str:
                         conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
                         
             except Exception as e_url:
+                # Log silencioso e continuar para próxima URL
                 continue  # Pular URL com erro e continuar
         
         if not conteudos:
@@ -154,25 +185,29 @@ def action_browser_search(query: str, engine: str = "google") -> str:
         # 3. Construir contexto completo para o LLM
         contexto_completo = "\n\n---\n\n".join(conteudos)
         
-        # 4. Chamar Groq para sintetizar resposta
+        # Debug: mostrar quantas páginas foram lidas
+        print(f"   [DEBUG] {len(conteudos)} página(s) lida(s) com sucesso")
+        
+        # 4. Chamar Groq para sintetizar resposta com timeout maior
         try:
             from llm import chamar_groq
             prompt = f"""Tu és uma assistente útil e especializada em pesquisa na internet. 
 O usuário fez a seguinte pergunta: "{query}"
 
-Pesquisei na internet e li o conteúdo real de várias páginas. Aqui está o que encontrei:
+Pesquisei na internet e li o conteúdo REAL de {len(conteudos)} página(s). Aqui está o que encontrei:
 
 {contexto_completo}
 
 Com base APENAS nestas informações reais que extraí das páginas web, responde à pergunta do usuário:
-- Dá uma resposta clara, direta e completa em português (3-6 frases).
-- Cita fontes quando relevante (ex: "Segundo o site X...").
-- Se as fontes tiverem informações diferentes, menciona isso.
+- Dá uma resposta clara, direta e completa em português (5-8 frases).
+- Cita fontes quando relevante (ex: "Segundo o site X...", "De acordo com...").
+- Se as fontes tiverem informações diferentes, menciona isso claramente.
 - Se não encontrares informação suficiente nas fontes, diz isso claramente.
 - NÃO inventes informação que não esteja nos conteúdos acima.
-- NÃO listes as fontes no final, integra a informação na resposta natural."""
+- NÃO listes as fontes no final como uma lista separada, integra a informação na resposta natural.
+- Sê informativa e útil, como se estivesses a explicar o que aprendeste."""
 
-            resposta = chamar_groq(prompt, timeout=25)
+            resposta = chamar_groq(prompt, timeout=35)
             if resposta and len(resposta.strip()) > 20:
                 # Verificar se a resposta é adequada
                 if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
@@ -180,6 +215,7 @@ Com base APENAS nestas informações reais que extraí das páginas web, respond
                 else:
                     return resposta
         except Exception as e_llm:
+            print(f"   [DEBUG] Erro no LLM: {e_llm}")
             pass
         
         # Fallback: mostrar resumo dos conteúdos se LLM falhar
@@ -188,7 +224,7 @@ Com base APENAS nestas informações reais que extraí das páginas web, respond
             partes = conteudo.split('\nConteúdo:\n')
             if len(partes) > 1:
                 url = partes[0].replace('Fonte: ', '').strip()
-                texto = partes[1][:300] + "..." if len(partes[1]) > 300 else partes[1]
+                texto = partes[1][:400] + "..." if len(partes[1]) > 400 else partes[1]
                 linhas.append(f"\n{i}. {url}\n   {texto}")
         
         linhas.append("\n💡 Não consegui sintetizar uma resposta automática completa, mas podes explorar os conteúdos acima.")
