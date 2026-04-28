@@ -18,6 +18,138 @@ from memory import PALAVRAS
 from utils import safe_eval
 
 
+# ----- Helpers de datas relativas em português -----
+_PT_NUMS = {
+    "um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3, "três": 3, "quatro": 4,
+    "cinco": 5, "seis": 6, "sete": 7, "oito": 8, "nove": 9, "dez": 10,
+    "onze": 11, "doze": 12, "treze": 13, "catorze": 14, "quatorze": 14,
+    "quinze": 15, "vinte": 20, "trinta": 30,
+}
+_UNIDADES_DIAS = {
+    "dia": 1, "dias": 1,
+    "semana": 7, "semanas": 7,
+    "mes": 30, "meses": 30, "mês": 30,
+    "ano": 365, "anos": 365,
+}
+_UNIDADE_RE = "|".join(_UNIDADES_DIAS.keys())
+_NUM_RE = r"(?:\d+|" + "|".join(_PT_NUMS.keys()) + ")"
+
+
+# ----- Detector determinístico de insultos / assédio dirigido à Infinity -----
+# Quando o classificador LLM falha (caso real visto: "vai tomar no cu" tratado
+# como "encontrar trabalho num veículo"), capturamos aqui antes e damos uma
+# resposta curta no tom da personagem, sem moralismo nem texto longo.
+_INSULTOS_PATTERNS = [
+    r'\bvai (te|se) foder\b', r'\bvai (à|a) merda\b', r'\bvai (tomar|levar) no\b',
+    r'\bvai (te|se) lixar\b', r'\bvai (te|se) catar\b',
+    r'\bfilh[ao] da puta\b', r'\bcaralho\b', r'\bporra\b', r'\bmerda\b',
+    r'\bcabra[oõ]es?\b', r'\bidiota\b', r'\bestup[ií]da?\b', r'\bburra?\b',
+    r'\bot[áa]ri[ao]\b', r'\bimbecil\b', r'\binútil\b', r'\binutil\b',
+    r'\bes uma merda\b', r'\b[ée]s uma merda\b',
+]
+_ASSEDIO_PATTERNS = [
+    r'\bgostosa\b', r'\bgostos[ãa]o\b', r'\btes[ãa]o\b', r'\btarad[ao]\b',
+    r'\bvou (te |)comer\b', r'\bquero (te |)comer\b', r'\bcomer (te|tu|você)\b',
+    r'\bchupa\b', r'\bbroche\b', r'\bsexo\b', r'\bnu[ad]e?s?\b',
+    r'\btira a roupa\b', r'\bmostra (a|os|teus|seus) (peitos?|mamas?|cu|rabo|corpo)\b',
+    r'\bsentar (em|no) (mim|colo)\b', r'\b(beij|abra[çc])a-me\b',
+]
+_RESPOSTAS_INSULTO = [
+    "Eu sigo no meu, obrigada. Pedido a sério?",
+    "Pulamos essa parte. Em que posso ajudar?",
+    "Anotado. Próximo pedido?",
+    "Vamos focar — em que precisas mesmo?",
+]
+_RESPOSTAS_ASSEDIO = [
+    "Não vou por aí. Posso ajudar com algo útil?",
+    "Eu sou assistente, não é por aí. Próximo pedido?",
+    "Não, obrigada. Em que mais posso ajudar?",
+    "Esse não é o serviço. Diz-me o que queres fazer.",
+]
+
+
+def _detectar_insulto_ou_assedio(q: str) -> str | None:
+    qq = f" {q} "
+    for p in _ASSEDIO_PATTERNS:
+        if re.search(p, qq):
+            return random.choice(_RESPOSTAS_ASSEDIO)
+    for p in _INSULTOS_PATTERNS:
+        if re.search(p, qq):
+            return random.choice(_RESPOSTAS_INSULTO)
+    return None
+
+
+def _num_pt(token: str) -> int | None:
+    if token.isdigit():
+        return int(token)
+    return _PT_NUMS.get(token)
+
+
+def _parse_data_relativa(q: str):
+    """Devolve um datetime ou None.
+
+    Reconhece, em português PT/BR:
+      • ontem / anteontem / antes de ontem
+      • amanhã / depois de amanhã
+      • há/ha N (dia|semana|mês|ano)(s)
+      • N (dia|semana|...)(s) atrás
+      • daqui a N (dia|semana|...)(s) | em N (dia|...)(s)
+      • semana passada / mês passado / ano passado
+      • próxima semana / próximo mês / próximo ano
+      • uma semana atrás / daqui a uma semana
+    Só dispara se o utilizador estiver a perguntar uma data ("que dia",
+    "que data", "qual o dia"); caso contrário devolve None.
+    """
+    from datetime import datetime, timedelta  # import local
+    if not re.search(r'\bque (dia|data)\b|\bqual (é|e|foi|ser[áa]) (o|a) (dia|data)\b', q):
+        return None
+
+    # Marcadores absolutos simples
+    if re.search(r'\bantes\s+de\s+ontem\b|\banteontem\b', q):
+        return datetime.now() - timedelta(days=2)
+    if re.search(r'\bdepois\s+de\s+amanh[ãa]\b', q):
+        return datetime.now() + timedelta(days=2)
+    if re.search(r'\bontem\b', q):
+        return datetime.now() - timedelta(days=1)
+    if re.search(r'\bamanh[ãa]\b', q):
+        return datetime.now() + timedelta(days=1)
+
+    # "semana passada" / "mês passado" / "ano passado"
+    m = re.search(rf'\b({_UNIDADE_RE})\s+passad[ao]\b', q)
+    if m:
+        return datetime.now() - timedelta(days=_UNIDADES_DIAS[m.group(1)])
+    # "próxima semana" / "próximo mês" / "próximo ano" / "que vem"
+    m = re.search(rf'\b(?:pr[óo]xim[ao]|que vem)\s+({_UNIDADE_RE})\b', q)
+    if m:
+        return datetime.now() + timedelta(days=_UNIDADES_DIAS[m.group(1)])
+    m = re.search(rf'\b({_UNIDADE_RE})\s+que vem\b', q)
+    if m:
+        return datetime.now() + timedelta(days=_UNIDADES_DIAS[m.group(1)])
+
+    # "há N unidades" / "ha N unidades"
+    m = re.search(rf'\bh[áa]\s+({_NUM_RE})\s+({_UNIDADE_RE})\b', q)
+    if m:
+        n = _num_pt(m.group(1))
+        if n:
+            return datetime.now() - timedelta(days=n * _UNIDADES_DIAS[m.group(2)])
+
+    # "N unidades atrás"
+    m = re.search(rf'\b({_NUM_RE})\s+({_UNIDADE_RE})\s+atr[áa]s\b', q)
+    if m:
+        n = _num_pt(m.group(1))
+        if n:
+            return datetime.now() - timedelta(days=n * _UNIDADES_DIAS[m.group(2)])
+
+    # "daqui a N unidades" / "em N unidades" / "daqui N unidades"
+    m = re.search(rf'\b(?:daqui\s+a|em|daqui)\s+({_NUM_RE})\s+({_UNIDADE_RE})\b', q)
+    if m:
+        n = _num_pt(m.group(1))
+        if n:
+            return datetime.now() + timedelta(days=n * _UNIDADES_DIAS[m.group(2)])
+
+    return None
+
+
 # ----- Pré-análise determinística (sem IA, só dados objetivos) -----
 def pre_analyze(query: str) -> str | None:
     """Atende apenas o que tem resposta factual (matemática, hora, data, criar
@@ -75,25 +207,9 @@ def pre_analyze(query: str) -> str | None:
 
     if not is_personal:
         # Datas relativas determinísticas
-        if re.search(r'\bantes\s*de\s*ontem\b|\banteontem\b', q):
-            return (datetime.now() - timedelta(days=2)).strftime('%d/%m/%Y')
-        if re.search(r'\bontem\b', q) and "que dia" in q:
-            return (datetime.now() - timedelta(days=1)).strftime('%d/%m/%Y')
-        if re.search(r'\bdepois\s*de\s*amanh[ãa]\b', q):
-            return (datetime.now() + timedelta(days=2)).strftime('%d/%m/%Y')
-        if re.search(r'\bamanh[ãa]\b', q) and "que dia" in q:
-            return (datetime.now() + timedelta(days=1)).strftime('%d/%m/%Y')
-
-        # "que dia foi/será há/daqui a N dias"
-        match = re.search(r'que dia (foi|ser[áa]) (.+?)\s*$', q)
-        if match:
-            tipo = match.group(1)
-            num_match = re.search(r'(\d+)', match.group(2))
-            if num_match and "dia" in match.group(2):
-                num = int(num_match.group(1))
-                if tipo.startswith("foi"):
-                    return (datetime.now() - timedelta(days=num)).strftime('%d/%m/%Y')
-                return (datetime.now() + timedelta(days=num)).strftime('%d/%m/%Y')
+        data_rel = _parse_data_relativa(q)
+        if data_rel is not None:
+            return data_rel.strftime('%d/%m/%Y')
 
         # Pedido genérico sobre a data de hoje
         if re.search(r'\b(que dia (é|e) hoje|que data (é|e) hoje|data de hoje|dia de hoje|hoje (é|e) que dia|qual (é|e) (a )?data|que dia (é|e))\b', q):
@@ -148,6 +264,11 @@ def analisar(entrada: str) -> dict:
 
     if ck := checar_palavra(entrada):
         return ck
+
+    # Detector determinístico de insultos/assédio — antes do LLM, para garantir
+    # uma resposta curta no tom da Infinity em vez de divagações do classificador.
+    if resp := _detectar_insulto_ou_assedio(e):
+        return {"action": "responder", "texto": resp, "source": "guardrail"}
 
     if pre := pre_analyze(entrada):
         if pre.startswith("__criar_arquivo:"):
@@ -231,17 +352,27 @@ def analisar(entrada: str) -> dict:
     if any(h in e for h in ["ajuda", "help"]):
         return {"action": "ajuda"}
 
-    if any(c in e for c in ["clima", "tempo", "graus", "quantos graus", "previsão"]):
+    if any(c in e for c in ["clima", "tempo", "graus", "quantos graus", "previsão", "previsao"]):
         cidade = None
         amanha = "amanhã" in e or "amanha" in e
-        for cid in ["são paulo", "rio de janeiro", "lisboa", "london", "new york"]:
+        # "previsão 7 dias", "previsão de 5 dias", "previsão para 3 dias"
+        dias = 0
+        m_dias = re.search(r'previs[ãa]o(?:\s+(?:de|para|dos?))?\s+(\d+)\s*dias?', e)
+        if m_dias:
+            dias = int(m_dias.group(1))
+        elif "previsão" in e or "previsao" in e:
+            # "previsão semana" / "previsão da semana"
+            if re.search(r'\bsemana\b', e):
+                dias = 7
+        for cid in ["são paulo", "rio de janeiro", "lisboa", "porto", "torres vedras",
+                    "london", "new york", "madrid", "paris"]:
             if cid in e:
                 cidade = cid.title()
-                if cid in ["são paulo", "rio de janeiro", "lisboa"]:
+                if cid in ["são paulo", "rio de janeiro", "lisboa", "torres vedras"]:
                     cidade = {"são paulo": "São Paulo", "rio de janeiro": "Rio de Janeiro",
-                              "lisboa": "Lisboa"}[cid]
+                              "lisboa": "Lisboa", "torres vedras": "Torres Vedras"}[cid]
                 break
-        return {"action": "clima", "cidade": cidade, "amanha": amanha}
+        return {"action": "clima", "cidade": cidade, "amanha": amanha, "dias": dias}
 
     if "espaço" in e and ("livre" in e or "disco" in e or "pc" in e or " hd" in e or "ssd" in e):
         return {"action": "disk_usage"}
@@ -340,7 +471,9 @@ def _build_action_table(dec: dict) -> dict:
         "matematica": lambda: str(safe_eval(dec.get("expr", "0"))),
         "resumo_conversa": _resumo_conversa,
         "hora": actions.action_hora,
-        "clima": lambda: actions.action_clima(dec.get("cidade"), dec.get("amanha", False)),
+        "clima": lambda: actions.action_clima(
+            dec.get("cidade"), dec.get("amanha", False), dec.get("dias", 0)
+        ),
         "sysinfo": actions.action_sysinfo,
         "battery_status": actions.action_battery_status,
         "network_info": actions.action_network_info,

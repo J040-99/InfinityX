@@ -22,10 +22,17 @@ palavras.json       # dicionário pessoal
 
 1. Correção de typos comuns (`TYPOS_MAP`).
 2. `checar_palavra`: dicionário pessoal (aprende/procura/lista/esquece).
-3. `pre_analyze`: respostas instantâneas sem IA (matemática PT, saudações, hora, data, criar arquivo).
-4. `classify_intent` via Groq (`llama-3.1-8b-instant`) com confiança ≥ 0.85.
-5. Fallback por regex (sair, ajuda, clima, disk_usage, abrir apps conhecidos, matemática).
-6. Último recurso: `buscar_info` (LM Studio → Groq → Perplexity).
+3. **Guardrail determinístico** de insultos/assédio (`_detectar_insulto_ou_assedio`): se a entrada bate em padrões conhecidos (palavrões dirigidos, conteúdo sexual), devolve directamente uma resposta curta no tom da Infinity, sem chamar o LLM (que costumava divagar).
+4. `pre_analyze`: respostas instantâneas sem IA (matemática PT, saudações, hora, data, criar arquivo). Inclui `_parse_data_relativa` para "ontem/anteontem/amanhã/depois de amanhã", "há N (dias|semanas|meses|anos)", "N atrás", "daqui a N", "semana/mês/ano passado", "próxima semana/mês/ano".
+5. `classify_intent` via Groq (`llama-3.1-8b-instant`) com confiança ≥ 0.85.
+6. Fallback por regex (sair, ajuda, clima/previsão N dias, disk_usage, abrir apps conhecidos, matemática).
+7. Último recurso: `buscar_info` (LM Studio → Groq → Perplexity).
+
+### Clima e previsão
+
+`action_clima(cidade, amanha, dias)` usa duas APIs do OpenWeatherMap:
+- tempo actual via `/data/2.5/weather`
+- previsão (amanhã ou N dias, máx 5 no plano gratuito) via `/data/2.5/forecast` em `_previsao_openweather`. Para "amanhã" agrupa os 8 slots de 3h e mostra o slot mais próximo do meio-dia mais a min/max do dia.
 
 ## Variáveis de ambiente (em `InfinityX/.env`)
 

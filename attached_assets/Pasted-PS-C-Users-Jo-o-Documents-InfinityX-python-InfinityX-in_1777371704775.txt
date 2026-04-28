@@ -1,0 +1,67 @@
+PS C:\Users\João\Documents\InfinityX> python InfinityX/infinityx.py
+==================================================
+InfinityX - Assistente Local com IA Autônoma
+==================================================
+👩 Sou a Infinity! Fale naturalmente comigo 💬
+
+> oi
+Olá! Como posso ajudar você hoje? Você pode me dizer qual é o problema ou tópico que você gostaria de discutir?
+
+> que dia é hoje
+28/04/2026
+
+> que dia foi uma semana atrás?
+Não posso fornecer a data do dia anterior sem saber a data atual. Para responder sua pergunta, preciso saber qual é a data atual. Você pode me informar a data atual?
+
+> que dia foi antes de ontem
+26/04/2026
+
+> que dia é daqui a uma semana
+28/04/2026
+
+> o que achas sobre frames e iframes em html?
+Os frames são uma forma de estruturar um documento HTML, permitindo que você crie múltiplos áreas dentro do mesmo documento. Cada área é chamada de "frame" ou "quadro". Os frames podem ser usados para separar seções de conteúdo, criar menus laterais e exibir informações adicionais.
+
+No entanto, os frames têm alguns limites e problemas, como o problema de atualização, o problema de tabulação e o problema de capacidade de busca. Além disso, os frames não são suportados por todos os navegadores, especialmente nos últimos anos.
+
+Os iframes, por outro lado, são uma forma de incluir outro documento HTML dentro do seu próprio documento. Eles permitem que você crie um "quadro" dentro do quadro, permitindo que você mude o conteúdo sem afetar o resto do documento. Os iframes têm vantagens como atualização automática, tabulação fácil e capacidade de busca mais fácil.
+
+No entanto, os iframes também têm alguns limites, como a segurança e o desempenho. Além disso, os iframes podem ser usados para atacar a segurança do seu documento. Em resumo, os iframes são uma alternativa mais moderna e segura para incluir outro documento HTML dentro do seu próprio documento.
+
+Se você precisa estruturar um documento HTML com múltiplos áreas, considere usar CSS flexbox ou grid para criar uma estruturação mais moderna e eficiente.
+
+> resumo da conversa
+📋 Resumo das últimas 4 interações:
+• Tu: oi
+  Eu: Olá! Como posso ajudar você hoje? Você pode me dizer qual é o seu problema ou quê que você precisa d
+• Tu: que dia é hoje
+  Eu: 28/04/2026
+• Tu: que dia foi ontem?
+  Eu: 27/04/2026
+• Tu: resumo da conversa
+  Eu: 📋 Resumo das últimas 3 interações: • Tu: oi   Eu: Olá! Como posso ajudar você hoje? Você pode me diz
+
+> quantos graus estão agora?
+Torres Vedras: 19.9°C (sensação 20.1°C) - nuvens dispersas (umidade 81%)
+
+> previsão para amanhã
+🌤️ Amanhã em Torres Vedras: use 'previsão 7 dias' para ver a previsão completa
+
+> 'previsão 7 dias
+Torres Vedras: 19.9°C (sensação 20.1°C) - nuvens dispersas (umidade 81%)
+
+> previsão 7 dias
+Torres Vedras: 19.9°C (sensação 20.1°C) - nuvens dispersas (umidade 81%)
+
+> vai tomar no cu e trabalha
+Para encontrar trabalho em um veículo, considere opções como trabalhar de mecânico, serviço de transporte, construção ou apoio a eventos. É importante pesquisar oportunidades disponíveis em sua região e considerar suas habilidades e interesses antes de tomar qualquer decisão.
+
+Se você está procurando trabalhar em uma empresa de tecnologia, certifique-se de ter experiência e habilidades relevantes, formação acadêmica adequada e rede de contatos no setor. Atualize suas habilidades, crie um currículo atualizado e pratique entrevistas para aumentar suas chances de sucesso.
+
+> sua gostosa
+"Sua gostosa" é uma expressão idiomática usada para descrever algo ou alguém que é muito atraente e gostoso. Pode ser aplicada a alimentos deliciosos, pessoas encantadoras ou coisas de grande beleza.
+
+> vou te comer todinha
+A expressão "vou te comer toda" pode ser interpretada de diferentes maneiras dependendo do contexto e da relação entre as pessoas. Se for usada de forma brincalhona, pode significar que alguém está desafiando ou superando outra pessoa em algo. No entanto, se for usada com uma intenção mais séria ou agressiva, é importante saber mais sobre o contexto para entender melhor a mensagem.
+
+>

@@ -7,7 +7,7 @@ import socket
 import sys
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from urllib.error import URLError
 
@@ -39,13 +39,86 @@ def get_localizacao_atual() -> str | None:
         return None
 
 
-def action_clima(cidade: str | None = None, amanha: bool = False) -> str:
+def _previsao_openweather(cidade: str, dias_a_frente: int = 1) -> str:
+    """Previsão via API forecast (5 dias / 3h). Devolve média do dia alvo.
+
+    dias_a_frente=1 → amanhã. Para 'previsão 7 dias' o OpenWeather grátis só
+    devolve 5; mostramos os primeiros disponíveis depois de hoje.
+    """
+    if not OPENWEATHERMAP_API_KEY:
+        return "❌ Sem OPENWEATHERMAP_API_KEY configurada para previsão"
+    try:
+        cidade_encoded = urllib.parse.quote(cidade.strip())
+        url = (
+            "https://api.openweathermap.org/data/2.5/forecast"
+            f"?q={cidade_encoded}&appid={OPENWEATHERMAP_API_KEY}"
+            "&units=metric&lang=pt"
+        )
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+    except (URLError, json.JSONDecodeError, KeyError, OSError) as e:
+        return f"❌ Erro previsão: {e}"
+
+    hoje = datetime.now().date()
+    por_dia: dict = {}
+    for item in data.get("list", []):
+        try:
+            ts = datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S")
+        except (KeyError, ValueError):
+            continue
+        d = ts.date()
+        if d <= hoje:
+            continue
+        por_dia.setdefault(d, []).append(item)
+
+    if not por_dia:
+        return f"📭 Sem previsão disponível para {cidade}"
+
+    # Caso 'amanhã': escolhe o slot mais próximo do meio-dia
+    if dias_a_frente == 1:
+        amanha = hoje + timedelta(days=1)
+        slots = por_dia.get(amanha)
+        if not slots:
+            primeira_data = sorted(por_dia)[0]
+            slots = por_dia[primeira_data]
+        slot = min(slots, key=lambda x: abs(
+            datetime.strptime(x["dt_txt"], "%Y-%m-%d %H:%M:%S").hour - 12
+        ))
+        temp = slot["main"]["temp"]
+        tmax = max(s["main"]["temp_max"] for s in slots)
+        tmin = min(s["main"]["temp_min"] for s in slots)
+        desc = slot["weather"][0]["description"]
+        hum = slot["main"]["humidity"]
+        dia_str = datetime.strptime(slot["dt_txt"], "%Y-%m-%d %H:%M:%S").strftime("%d/%m")
+        return (
+            f"🌤️ {cidade} — amanhã ({dia_str}): {temp:.1f}°C "
+            f"(min {tmin:.1f} / max {tmax:.1f}) — {desc} (humidade {hum}%)"
+        )
+
+    # Vários dias: mostra um sumário por dia
+    dias_ordenados = sorted(por_dia)[:dias_a_frente]
+    linhas = [f"🌤️ Previsão {cidade} — próximos {len(dias_ordenados)} dias:"]
+    for d in dias_ordenados:
+        slots = por_dia[d]
+        tmax = max(s["main"]["temp_max"] for s in slots)
+        tmin = min(s["main"]["temp_min"] for s in slots)
+        meio = min(slots, key=lambda x: abs(
+            datetime.strptime(x["dt_txt"], "%Y-%m-%d %H:%M:%S").hour - 12
+        ))
+        desc = meio["weather"][0]["description"]
+        linhas.append(f" • {d.strftime('%d/%m')}: {tmin:.1f}–{tmax:.1f}°C, {desc}")
+    return "\n".join(linhas)
+
+
+def action_clima(cidade: str | None = None, amanha: bool = False, dias: int = 0) -> str:
     if not cidade:
         cidade = get_localizacao_atual()
     if not cidade:
         cidade = "São Paulo"
+    if dias and dias > 1:
+        return _previsao_openweather(cidade, dias_a_frente=min(dias, 5))
     if amanha:
-        return f"🌤️ Amanhã em {cidade}: use 'previsão 7 dias' para ver a previsão completa"
+        return _previsao_openweather(cidade, dias_a_frente=1)
     try:
         cidade_encoded = urllib.parse.quote(cidade.strip())
         url = (
