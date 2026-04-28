@@ -207,7 +207,7 @@ Com base APENAS nestas informações reais que extraí das páginas web, respond
 - NÃO listes as fontes no final como uma lista separada, integra a informação na resposta natural.
 - Sê informativa e útil, como se estivesses a explicar o que aprendeste."""
 
-            resposta = chamar_groq(prompt, timeout=35)
+            resposta = chamar_groq(prompt)
             if resposta and len(resposta.strip()) > 20:
                 # Verificar se a resposta é adequada
                 if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
