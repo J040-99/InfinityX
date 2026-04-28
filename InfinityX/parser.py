@@ -319,6 +319,7 @@ def analisar(entrada: str) -> dict:
         return {"action": "responder", "texto": pre}
 
     # Follow-up: perguntas curtas que referem-se à última pesquisa
+    # EXCETO se for sobre música (para não quebrar o comando "toca musica")
     followup_patterns = [
         r'^certeza\??$', r'^mesmo\??$', r'^mesma\??$',
         r'^e ?', r'^e o ', r'^e a ',
@@ -328,8 +329,12 @@ def analisar(entrada: str) -> dict:
         r'^e se\b', r'^e se ',
         r'^e ?\w+\??$',
     ]
+    # Não tratar como follow-up se a última pesquisa foi sobre música e o usuário disse apenas "certeza?" ou similar
+    # Mas permitir follow-up para outros contextos
     if MEMORIA.get("ultima_pesquisa") and any(re.match(p, e) for p in followup_patterns):
-        return {"action": "browser_search", "query": MEMORIA["ultima_pesquisa"], "source": "followup"}
+        # Verificar se não é um caso de música mal interpretado
+        if "musica" not in MEMORIA.get("ultima_pesquisa", "").lower() or len(e) > 10:
+            return {"action": "browser_search", "query": MEMORIA["ultima_pesquisa"], "source": "followup"}
 
     # Perguntas sobre clima/tempo — VERIFICA ANTES dos padrões factuais genéricos
     # para evitar que caiam no browser_search
@@ -354,6 +359,23 @@ def analisar(entrada: str) -> dict:
                               "lisboa": "Lisboa", "torres vedras": "Torres Vedras"}[cid]
                 break
         return {"action": "clima", "cidade": cidade, "amanha": amanha, "dias": dias}
+
+    # Comandos de música — VERIFICA ANTES dos padrões factuais
+    # "toca uma musica", "toca musica", "toca [nome]", "reproduz musica", "põe musica",
+    # "coloca musica", "play", "toca [artista]", "toca [musica específica]"
+    # "mete uma musica", "mete musica", "por musica"
+    if any(c in e for c in ["toca", "toca uma", "tocar", "reproduz", "reproduzir", "põe musica", "poes musica", "coloca musica", "play", "youtube music", "mete", "mete uma", "por musica"]):
+        # Extrair o termo da música/artista após o verbo
+        termo = None
+        match = re.search(r'(?:toca|toca uma|tocar|reproduz|reproduzir|põe|poes|coloca|play|mete|mete uma|por)\s+(?:uma\s+)?(?:musica|música)?\s*(?:a\s+tocar)?\s*(.+)?$', e)
+        if match and match.group(1):
+            termo = match.group(1).strip()
+            if termo in ["?", "por favor", "pfv", "pls", "a tocar"]:
+                termo = None
+        # Se não extraiu nada ou foi só "toca musica" sem especificar, usa shuffle
+        if not termo:
+            return {"action": "youtube_music_shuffle"}
+        return {"action": "yt_music_play", "query": termo}
 
     # Perguntas que devem usar browser_search (facts que mudam frequentemente)
     # VERIFICA PRIMEIRO, independente da confiança do LLM

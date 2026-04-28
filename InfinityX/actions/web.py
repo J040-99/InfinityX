@@ -61,39 +61,141 @@ def action_abrir(app: str) -> str:
 
 
 def action_browser_search(query: str, engine: str = "google") -> str:
-    """Pesquisa na web e usa LLM para responder."""
+    """Pesquisa na web, faz scraping do conteúdo das páginas e usa LLM para responder."""
     from memory import MEMORIA
-    MEMORIA["ultima_pesquisa"] = query
+    # Não guardar pesquisas genéricas de follow-up como "Olá"
+    if query.strip().lower() not in ["olá", "oi", "ola"]:
+        MEMORIA["ultima_pesquisa"] = query
+    
     try:
-        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-        req = urllib.request.Request(url, headers={
+        # 1. Pesquisa inicial para obter URLs
+        url_pesquisa = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        req = urllib.request.Request(url_pesquisa, headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         })
         with urllib.request.urlopen(req, timeout=10) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
+            html_pesquisa = resp.read().decode("utf-8", errors="ignore")
         
         import re
-        results = re.findall(r'<a[^>]*class=.result__a[^>]*>([^<]*)', html)
-        results = [re.sub(r'<[^>]+>', '', r).strip() for r in results[:5] if r.strip()]
+        # Extrair URLs dos resultados
+        urls = []
+        url_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*class="result__url"'
+        for match in re.finditer(url_pattern, html_pesquisa):
+            url = match.group(1)
+            if url not in urls and len(urls) < 3:  # Pegar até 3 URLs
+                urls.append(url)
         
-        if not results:
+        # Fallback: tentar extrair de links normais se não achar urls específicas
+        if not urls:
+            link_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*>'
+            for match in re.finditer(link_pattern, html_pesquisa):
+                url = match.group(1)
+                if 'duckduckgo' not in url and url not in urls and len(urls) < 3:
+                    urls.append(url)
+        
+        if not urls:
             return f"❌ Não consegui obter resultados para '{query}'"
         
-        resultados_texto = "\n".join(f"{i}. {r}" for i, r in enumerate(results, 1))
+        # 2. Fazer scraping do conteúdo de cada URL
+        conteudos = []
+        for url in urls:
+            try:
+                req_url = urllib.request.Request(url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                })
+                with urllib.request.urlopen(req_url, timeout=8) as resp_url:
+                    html_content = resp_url.read().decode("utf-8", errors="ignore")
+                
+                # Extrair texto principal usando BeautifulSoup
+                try:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(html_content, 'html.parser')
+                    
+                    # Remover scripts, styles, nav, footer, header
+                    for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+                        tag.decompose()
+                    
+                    # Tentar encontrar conteúdo principal
+                    main_content = None
+                    for tag_id in ['main', 'content', 'article', 'post']:
+                        main_tag = soup.find(id=tag_id) or soup.find(class_=tag_id)
+                        if main_tag:
+                            main_content = main_tag
+                            break
+                    
+                    if not main_content:
+                        # Fallback: pegar todos os parágrafos
+                        paragraphs = soup.find_all('p')
+                        text = '\n'.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 50])
+                    else:
+                        text = main_content.get_text(separator='\n', strip=True)
+                    
+                    # Limitar tamanho do texto (máx 3000 caracteres por página)
+                    if len(text) > 3000:
+                        text = text[:3000] + "..."
+                    
+                    if text.strip():
+                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
+                except Exception as e_bs:
+                    # Fallback sem BeautifulSoup: extrair texto básico
+                    text = re.sub(r'<[^>]+>', '\n', html_content)
+                    text = re.sub(r'\n\s*\n', '\n\n', text)
+                    paragraphs = [p.strip() for p in text.split('\n') if len(p) > 100]
+                    text = '\n'.join(paragraphs[:20])
+                    if text.strip():
+                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
+                        
+            except Exception as e_url:
+                continue  # Pular URL com erro e continuar
         
+        if not conteudos:
+            return f"❌ Não consegui ler o conteúdo das páginas para '{query}'"
+        
+        # 3. Construir contexto completo para o LLM
+        contexto_completo = "\n\n---\n\n".join(conteudos)
+        
+        # 4. Chamar Groq para sintetizar resposta
         try:
             from llm import chamar_groq
-            prompt = f"Pergunta: {query}\n\nResultados da pesquisa:\n{resultados_texto}\n\nResponde em português, 2-3 frases, com base nos resultados. Se não tiveres certeza, diz isso."
-            resposta = chamar_groq(prompt)
-            return resposta
-        except Exception:
-            linhas = [f"🌐 Resultados para '{query}':"]
-            for i, r in enumerate(results, 1):
-                linhas.append(f"{i}. {r[:150]}")
-            return "\n".join(linhas)
+            prompt = f"""Tu és uma assistente útil e especializada em pesquisa na internet. 
+O usuário fez a seguinte pergunta: "{query}"
+
+Pesquisei na internet e li o conteúdo real de várias páginas. Aqui está o que encontrei:
+
+{contexto_completo}
+
+Com base APENAS nestas informações reais que extraí das páginas web, responde à pergunta do usuário:
+- Dá uma resposta clara, direta e completa em português (3-6 frases).
+- Cita fontes quando relevante (ex: "Segundo o site X...").
+- Se as fontes tiverem informações diferentes, menciona isso.
+- Se não encontrares informação suficiente nas fontes, diz isso claramente.
+- NÃO inventes informação que não esteja nos conteúdos acima.
+- NÃO listes as fontes no final, integra a informação na resposta natural."""
+
+            resposta = chamar_groq(prompt, timeout=25)
+            if resposta and len(resposta.strip()) > 20:
+                # Verificar se a resposta é adequada
+                if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
+                    pass  # Ignorar resposta inadequada
+                else:
+                    return resposta
+        except Exception as e_llm:
+            pass
+        
+        # Fallback: mostrar resumo dos conteúdos se LLM falhar
+        linhas = [f"🌐 Pesquisei e li várias páginas sobre '{query}'. Eis um resumo:"]
+        for i, conteudo in enumerate(conteudos[:3], 1):
+            partes = conteudo.split('\nConteúdo:\n')
+            if len(partes) > 1:
+                url = partes[0].replace('Fonte: ', '').strip()
+                texto = partes[1][:300] + "..." if len(partes[1]) > 300 else partes[1]
+                linhas.append(f"\n{i}. {url}\n   {texto}")
+        
+        linhas.append("\n💡 Não consegui sintetizar uma resposta automática completa, mas podes explorar os conteúdos acima.")
+        return "\n".join(linhas)
         
     except Exception as e:
-        return f"❌ Erro ao pesquisar '{query}'"
+        return f"❌ Erro ao pesquisar '{query}': {e}"
 
 
 def action_abrir_url(url: str) -> str:
