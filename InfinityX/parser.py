@@ -13,7 +13,7 @@ from config import (
     OPERATORS_PT,
 )
 from llm import buscar_info, classify_intent
-from memory import PALAVRAS
+from memory import MEMORIA, PALAVRAS
 from utils import safe_eval
 
 
@@ -255,6 +255,10 @@ def pre_analyze(query: str) -> str | None:
         # Pedido genérico sobre a data de hoje
         if re.search(r'\b(que dia (é|e) hoje|que data (é|e) hoje|data de hoje|dia de hoje|hoje (é|e) que dia|qual (é|e) (a )?data|que dia (é|e))\b', q):
             return datetime.now().strftime('%d/%m/%Y')
+        if re.search(r'\bem que (anos?|mês|mês|semana) estamos?\b', q):
+            return datetime.now().strftime('%Y')
+        if re.search(r'\bque (anos?|mês|mês|semana|hora) (são|é)\b', q):
+            return datetime.now().strftime('%d/%m/%Y')
         if re.fullmatch(r'\s*(data|hoje)\s*\??', q):
             return datetime.now().strftime('%d/%m/%Y')
 
@@ -314,7 +318,35 @@ def analisar(entrada: str) -> dict:
             return {"action": "criar_arquivo", "nome": nome if nome else "novo_arquivo"}
         return {"action": "responder", "texto": pre}
 
+    # Follow-up: perguntas curtas que referem-se à última pesquisa
+    followup_patterns = [
+        r'^certeza\??$', r'^mesmo\??$', r'^mesma\??$',
+        r'^e ?', r'^e o ', r'^e a ',
+        r'^mais\b', r'^mais info\b', r'^mais detalhes\b',
+        r'^mais\b', r'^mais\b',
+        r'^explica\b', r'^como\??$', r'^porquê\b', r'^porque\b',
+        r'^e se\b', r'^e se ',
+        r'^e ?\w+\??$',
+    ]
+    if MEMORIA.get("ultima_pesquisa") and any(re.match(p, e) for p in followup_patterns):
+        return {"action": "browser_search", "query": MEMORIA["ultima_pesquisa"], "source": "followup"}
+
+    # Perguntas que devem usar browser_search (facts que mudam frequentemente)
+    # VERIFICA PRIMEIRO, independente da confiança do LLM
+    factual_patterns = [
+        r'\bmais rapid[oa]\b', r'\bmais veloz\b', r'\bmaior velocidade\b',
+        r'\bmais caro\b', r'\bmais barato\b', r'\bmelhor\b.*\bdo mundo\b',
+        r'\bquem é\b', r'\bquem foi\b', r'\bqual é\b', r'\bqual a\b',
+        r'\bquanto custa\b', r'\bpreço de\b', r'\bcapital\b',
+        r'\brecorde\b', r'\branking\b', r'\bpopulação\b',
+        r'\bmais popular\b', r'\bmais vendido\b',
+    ]
+    e_lower = entrada.strip().lower()
+    if any(re.search(p, e_lower, re.IGNORECASE) for p in factual_patterns):
+        return {"action": "browser_search", "query": entrada.strip(), "source": "fallback"}
+    
     llm = classify_intent(entrada)
+    
     if llm and llm.get("confidence", 0) >= CONFIDENCE_THRESHOLD:
         action_map = {
             "responder": "responder", "matematica": "matematica",
@@ -342,7 +374,7 @@ def analisar(entrada: str) -> dict:
             "ping": "ping", "bmi": "bmi",
             "type_text": "type_text", "press_key": "press_key",
             "click": "click", "window_control": "window_control",
-            "buscar": "conhecimento",
+            "buscar": "browser_search",
             "uuid_gen": "uuid_gen", "hash_text": "hash_text",
             "base64": "base64", "url_codec": "url_codec",
             "text_tools": "text_tools", "json_format": "json_format",
@@ -443,7 +475,32 @@ def analisar(entrada: str) -> dict:
             except KeyError:
                 pass
 
-    return {"action": "buscar", "query": entrada, "source": "fallback"}
+    # Padrões simples que devem ser "responder" (não factual)
+    saudactions = ["oi", "olá", "ola", "opa", "ei", "e ai", "eaí", "oiê", "hey", "yo", "ok", "beleza", "blz", "tmj", "valeu", "obrigado", "obrigada", "sim", "não"]
+    if e.strip().lower() in saudactions:
+        return {"action": "responder", "texto": "Olá! Como posso ajudar?"}
+    
+    # Respostas curtas que devem ser "responder"
+    if len(e.strip()) <= 15 and not any(p in e for p in factual_patterns):
+        return {"action": "responder", "texto": ""}  # LLM decide
+
+    # Detectar perguntas de mês
+    if re.search(r'\bem que (mês|mes)\b', e):
+        from datetime import datetime
+        meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+        mes = meses[datetime.now().month - 1]
+        return {"action": "hora", "mes": mes}
+
+    # Se é factual, usa browser_search (pesquisa real)
+    if any(re.search(p, e, re.IGNORECASE) for p in factual_patterns):
+        return {"action": "browser_search", "query": entrada.strip(), "entrada": entrada, "source": "fallback"}
+
+    # Se não é factual, usa "responder" (chat com LLM)
+    if not any(re.search(p, e, re.IGNORECASE) for p in factual_patterns):
+        return {"action": "responder", "texto": "", "entrada": entrada, "source": "fallback"}
+
+    return {"action": "responder", "texto": "", "entrada": entrada, "source": "fallback"}
 
 
 # ----- Executor -----
@@ -504,11 +561,24 @@ def _resumo_conversa() -> str:
 
 
 def _build_action_table(dec: dict) -> dict:
+    entrada = dec.get("entrada", "")
+    
+    def _responder():
+        texto = dec.get("texto", "")
+        if texto:
+            return texto
+        # Se texto vazio, chama LLM para gerar resposta
+        from llm import self_discuss
+        try:
+            return self_discuss(entrada or "Olá")
+        except Exception:
+            return "Olá! Como posso ajudar?"
+    
     return {
-        "responder": lambda: dec.get("texto", ""),
+        "responder": _responder,
         "matematica": lambda: str(safe_eval(dec.get("expr", "0"))),
         "resumo_conversa": _resumo_conversa,
-        "hora": actions.action_hora,
+        "hora": lambda: actions.action_hora(dec.get("mes")),
         "clima": lambda: actions.action_clima(
             dec.get("cidade"), dec.get("amanha", False), dec.get("dias", 0)
         ),
@@ -562,7 +632,7 @@ def _build_action_table(dec: dict) -> dict:
         "palavras_procurar": lambda: actions.action_palavras_procurar(dec.get("palavra", "")),
         "palavras_listar": actions.action_palavras_listar,
         "palavras_excluir": lambda: actions.action_palavras_excluir(dec.get("palavra", "")),
-        "conhecimento": lambda: buscar_info(dec.get("query") or dec.get("instrucao") or ""),
+        "conhecimento": lambda: actions.action_browser_search(dec.get("query") or dec.get("instrucao") or ""),
         "timer_set": lambda: actions.action_timer_set(dec.get("name", "timer"), dec.get("minutes", 5)),
         "type_text": lambda: actions.action_type_text(dec.get("text", "")),
         "press_key": lambda: actions.action_press_key(dec.get("key", "")),
@@ -668,4 +738,5 @@ def executar_acao(dec: dict) -> str:
     if action == "sair":
         return "__sair__"
 
-    return buscar_info(dec.get("query", dec.get("instrucao", "")))
+    # Último fallback: browser_search (não Perplexity)
+    return actions.action_browser_search(dec.get("query", dec.get("instrucao", "")))

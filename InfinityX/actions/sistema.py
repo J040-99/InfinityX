@@ -17,7 +17,9 @@ if PSUTIL_AVAILABLE:
     import psutil
 
 
-def action_hora() -> str:
+def action_hora(mes: str = None) -> str:
+    if mes:
+        return mes
     n = datetime.now()
     return f"{n.strftime('%d/%m/%Y')} às {n.strftime('%H:%M')}"
 

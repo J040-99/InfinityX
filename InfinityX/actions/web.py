@@ -61,14 +61,39 @@ def action_abrir(app: str) -> str:
 
 
 def action_browser_search(query: str, engine: str = "google") -> str:
-    engines = {
-        "google": f"https://www.google.com/search?q={urllib.parse.quote(query)}",
-        "youtube": f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}",
-        "bing": f"https://www.bing.com/search?q={urllib.parse.quote(query)}",
-    }
-    url = engines.get(engine, engines["google"])
-    webbrowser.open_new_tab(url)
-    return f"🌐 Pesquisando '{query}' no {engine.title()}"
+    """Pesquisa na web e usa LLM para responder."""
+    from memory import MEMORIA
+    MEMORIA["ultima_pesquisa"] = query
+    try:
+        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+        
+        import re
+        results = re.findall(r'<a[^>]*class=.result__a[^>]*>([^<]*)', html)
+        results = [re.sub(r'<[^>]+>', '', r).strip() for r in results[:5] if r.strip()]
+        
+        if not results:
+            return f"❌ Não consegui obter resultados para '{query}'"
+        
+        resultados_texto = "\n".join(f"{i}. {r}" for i, r in enumerate(results, 1))
+        
+        try:
+            from llm import chamar_groq
+            prompt = f"Pergunta: {query}\n\nResultados da pesquisa:\n{resultados_texto}\n\nResponde em português, 2-3 frases, com base nos resultados. Se não tiveres certeza, diz isso."
+            resposta = chamar_groq(prompt)
+            return resposta
+        except Exception:
+            linhas = [f"🌐 Resultados para '{query}':"]
+            for i, r in enumerate(results, 1):
+                linhas.append(f"{i}. {r[:150]}")
+            return "\n".join(linhas)
+        
+    except Exception as e:
+        return f"❌ Erro ao pesquisar '{query}'"
 
 
 def action_abrir_url(url: str) -> str:

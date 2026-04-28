@@ -29,15 +29,45 @@ def _post_chat(url: str, payload: dict, headers: dict | None = None, timeout: in
     return res.json()
 
 
+def _build_messages_with_history(prompt: str) -> list:
+    """Constrói messages com histórico recente para contexto.
+    Respeita o limite de tokens do modelo (4096)."""
+    MAX_TOKENS = 3500  # Reservar para resposta
+    SYSTEM_PROMPT = INTENT_SYSTEM_PROMPT[:500] if INTENT_SYSTEM_PROMPT else ""
+    
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    
+    if MEMORIA.get("historico"):
+        # Constrói histórico com limite de tokens
+        historico = []
+        for h in reversed(MEMORIA["historico"]):
+            ent = h.get("ent", "")
+            res = h.get("res", "")
+            #估算 tokens (aprox 1 token = 4 chars)
+            tokens_est = len(ent) + len(res)
+            historico.append((tokens_est, {"ent": ent, "res": res}))
+            if sum(t for t, _ in historico) > (MAX_TOKENS - len(prompt) - 500):
+                break
+        
+        # Adiciona do mais antigo para mais recente
+        for _, h in reversed(historico):
+            messages.append({"role": "user", "content": h["ent"]})
+            messages.append({"role": "assistant", "content": h["res"]})
+    
+    messages.append({"role": "user", "content": prompt})
+    return messages
+
+
 def chamar_groq(prompt: str, tentativa: int = 1) -> str:
     if not GROQ_API_KEY or not REQUESTS_AVAILABLE:
         raise RuntimeError("GROQ_API_KEY não configurada")
     t0 = time.perf_counter()
+    messages = _build_messages_with_history(prompt)
     data = _post_chat(
         "https://api.groq.com/openai/v1/chat/completions",
         {
             "model": GROQ_MODEL,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": 0.3 if tentativa == 1 else 0.5,
             "max_tokens": 512,
         },
@@ -53,11 +83,12 @@ def chamar_lm_studio(prompt: str, tentativa: int = 1) -> str:
     if not LM_STUDIO_URL or not REQUESTS_AVAILABLE:
         raise RuntimeError("LM_STUDIO_URL não configurada")
     t0 = time.perf_counter()
+    messages = _build_messages_with_history(prompt)
     data = _post_chat(
         LM_STUDIO_URL,
         {
             "model": "local-model",
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "temperature": 0.4 if tentativa == 1 else 0.6,
             "max_tokens": 512,
         },
@@ -66,13 +97,6 @@ def chamar_lm_studio(prompt: str, tentativa: int = 1) -> str:
     elapsed = (time.perf_counter() - t0) * 1000
     stats.set_llm("lm_studio", "local", data.get("usage"), elapsed)
     return data["choices"][0]["message"]["content"].strip()
-
-
-def chamar_perplexity(prompt: str) -> str:
-    url = f"https://www.perplexity.ai/search?q={urllib.parse.quote(prompt)}"
-    webbrowser.open(url)
-    stats.set_local("perplexity")
-    return f"🔍 Buscando no Perplexity: '{prompt}'"
 
 
 def self_discuss(prompt: str, use_lm_studio: bool = False) -> str:
@@ -84,7 +108,8 @@ def self_discuss(prompt: str, use_lm_studio: bool = False) -> str:
         except Exception:
             pass
     if not versoes:
-        return chamar_perplexity(prompt)
+        from actions.web import action_browser_search
+        return action_browser_search(prompt)
     if len(versoes) == 1:
         return versoes[0]
     try:
@@ -104,8 +129,9 @@ def buscar_info(prompt: str) -> str:
         try:
             return self_discuss(prompt)
         except Exception:
+            from actions.web import action_browser_search
             try:
-                return chamar_perplexity(prompt)
+                return action_browser_search(prompt)
             except Exception:
                 stats.set_local("erro")
                 return "Não consegui encontrar. Tente novamente."
