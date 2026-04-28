@@ -331,6 +331,30 @@ def analisar(entrada: str) -> dict:
     if MEMORIA.get("ultima_pesquisa") and any(re.match(p, e) for p in followup_patterns):
         return {"action": "browser_search", "query": MEMORIA["ultima_pesquisa"], "source": "followup"}
 
+    # Perguntas sobre clima/tempo — VERIFICA ANTES dos padrões factuais genéricos
+    # para evitar que caiam no browser_search
+    if any(c in e for c in ["clima", "tempo", "graus", "quantos graus", "previsão", "previsao", "temperatura", "está frio", "está calor", "faz frio", "faz calor", "chove", "chuva", "sol", "nublado"]):
+        cidade = None
+        amanha = "amanhã" in e or "amanha" in e
+        # "previsão 7 dias", "previsão de 5 dias", "previsão para 3 dias"
+        dias = 0
+        m_dias = re.search(r'previs[ãa]o(?:\s+(?:de|para|dos?))?\s+(\d+)\s*dias?', e)
+        if m_dias:
+            dias = int(m_dias.group(1))
+        elif "previsão" in e or "previsao" in e:
+            # "previsão semana" / "previsão da semana"
+            if re.search(r'\bsemana\b', e):
+                dias = 7
+        for cid in ["são paulo", "rio de janeiro", "lisboa", "porto", "torres vedras",
+                    "london", "new york", "madrid", "paris"]:
+            if cid in e:
+                cidade = cid.title()
+                if cid in ["são paulo", "rio de janeiro", "lisboa", "torres vedras"]:
+                    cidade = {"são paulo": "São Paulo", "rio de janeiro": "Rio de Janeiro",
+                              "lisboa": "Lisboa", "torres vedras": "Torres Vedras"}[cid]
+                break
+        return {"action": "clima", "cidade": cidade, "amanha": amanha, "dias": dias}
+
     # Perguntas que devem usar browser_search (facts que mudam frequentemente)
     # VERIFICA PRIMEIRO, independente da confiança do LLM
     factual_patterns = [
@@ -422,27 +446,7 @@ def analisar(entrada: str) -> dict:
     if any(h in e for h in ["ajuda", "help"]):
         return {"action": "ajuda"}
 
-    if any(c in e for c in ["clima", "tempo", "graus", "quantos graus", "previsão", "previsao"]):
-        cidade = None
-        amanha = "amanhã" in e or "amanha" in e
-        # "previsão 7 dias", "previsão de 5 dias", "previsão para 3 dias"
-        dias = 0
-        m_dias = re.search(r'previs[ãa]o(?:\s+(?:de|para|dos?))?\s+(\d+)\s*dias?', e)
-        if m_dias:
-            dias = int(m_dias.group(1))
-        elif "previsão" in e or "previsao" in e:
-            # "previsão semana" / "previsão da semana"
-            if re.search(r'\bsemana\b', e):
-                dias = 7
-        for cid in ["são paulo", "rio de janeiro", "lisboa", "porto", "torres vedras",
-                    "london", "new york", "madrid", "paris"]:
-            if cid in e:
-                cidade = cid.title()
-                if cid in ["são paulo", "rio de janeiro", "lisboa", "torres vedras"]:
-                    cidade = {"são paulo": "São Paulo", "rio de janeiro": "Rio de Janeiro",
-                              "lisboa": "Lisboa", "torres vedras": "Torres Vedras"}[cid]
-                break
-        return {"action": "clima", "cidade": cidade, "amanha": amanha, "dias": dias}
+    # Bloco de clima removido — já tratado acima na linha 336
 
     if "espaço" in e and ("livre" in e or "disco" in e or "pc" in e or " hd" in e or "ssd" in e):
         return {"action": "disk_usage"}
