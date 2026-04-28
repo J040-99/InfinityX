@@ -100,6 +100,16 @@ FILE_CATEGORIES = {
 TYPOS_MAP = {
     "whastapp": "whatsapp", "youtub": "youtube", "chrom": "chrome",
     "firefos": "firefox", "notepd": "notepad",
+    # browser / navegador
+    "bwoser": "browser", "browse": "browser", "broswer": "browser",
+    "browwser": "browser", "broeser": "browser", "broser": "browser",
+    "navegado": "navegador", "naveghador": "navegador", "navagador": "navegador",
+    "navedador": "navegador",
+    # outros típicos
+    "calcuadora": "calculadora", "calculdora": "calculadora",
+    "explordor": "explorador", "explorrador": "explorador",
+    "spotfy": "spotify", "spotfiy": "spotify",
+    "facebok": "facebook", "instgram": "instagram", "intagram": "instagram",
 }
 
 

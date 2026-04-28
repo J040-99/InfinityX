@@ -301,8 +301,10 @@ def checar_palavra(entrada: str) -> dict | None:
 def analisar(entrada: str) -> dict:
     e = entrada.strip().lower()
 
+    # Substitui só palavras inteiras — evita transformar "browser" em "browserr"
+    # quando "browse" → "browser" está no mapa, etc.
     for typo, correto in TYPOS_MAP.items():
-        e = e.replace(typo, correto)
+        e = re.sub(rf'\b{re.escape(typo)}\b', correto, e)
 
     if ck := checar_palavra(entrada):
         return ck
