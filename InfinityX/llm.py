@@ -2,9 +2,11 @@
 
 import json
 import re
+import time
 import urllib.parse
 import webbrowser
 
+import stats
 from config import (
     CONFIDENCE_THRESHOLD,
     GROQ_API_KEY,
@@ -18,30 +20,42 @@ if REQUESTS_AVAILABLE:
     import requests
 
 
+GROQ_MODEL = "llama-3.1-8b-instant"
+
+
+def _post_chat(url: str, payload: dict, headers: dict | None = None, timeout: int = 30) -> dict:
+    res = requests.post(url, json=payload, headers=headers or {}, timeout=timeout)
+    res.raise_for_status()
+    return res.json()
+
+
 def chamar_groq(prompt: str, tentativa: int = 1) -> str:
     if not GROQ_API_KEY or not REQUESTS_AVAILABLE:
         raise RuntimeError("GROQ_API_KEY não configurada")
-    res = requests.post(
+    t0 = time.perf_counter()
+    data = _post_chat(
         "https://api.groq.com/openai/v1/chat/completions",
-        json={
-            "model": "llama-3.1-8b-instant",
+        {
+            "model": GROQ_MODEL,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3 if tentativa == 1 else 0.5,
             "max_tokens": 512,
         },
-        headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+        {"Authorization": f"Bearer {GROQ_API_KEY}"},
         timeout=30,
     )
-    res.raise_for_status()
-    return res.json()["choices"][0]["message"]["content"].strip()
+    elapsed = (time.perf_counter() - t0) * 1000
+    stats.set_llm("groq", GROQ_MODEL, data.get("usage"), elapsed)
+    return data["choices"][0]["message"]["content"].strip()
 
 
 def chamar_lm_studio(prompt: str, tentativa: int = 1) -> str:
     if not LM_STUDIO_URL or not REQUESTS_AVAILABLE:
         raise RuntimeError("LM_STUDIO_URL não configurada")
-    res = requests.post(
+    t0 = time.perf_counter()
+    data = _post_chat(
         LM_STUDIO_URL,
-        json={
+        {
             "model": "local-model",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.4 if tentativa == 1 else 0.6,
@@ -49,13 +63,15 @@ def chamar_lm_studio(prompt: str, tentativa: int = 1) -> str:
         },
         timeout=15,
     )
-    res.raise_for_status()
-    return res.json()["choices"][0]["message"]["content"].strip()
+    elapsed = (time.perf_counter() - t0) * 1000
+    stats.set_llm("lm_studio", "local", data.get("usage"), elapsed)
+    return data["choices"][0]["message"]["content"].strip()
 
 
 def chamar_perplexity(prompt: str) -> str:
     url = f"https://www.perplexity.ai/search?q={urllib.parse.quote(prompt)}"
     webbrowser.open(url)
+    stats.set_local("perplexity")
     return f"🔍 Buscando no Perplexity: '{prompt}'"
 
 
@@ -91,6 +107,7 @@ def buscar_info(prompt: str) -> str:
             try:
                 return chamar_perplexity(prompt)
             except Exception:
+                stats.set_local("erro")
                 return "Não consegui encontrar. Tente novamente."
 
 
@@ -109,10 +126,11 @@ def classify_intent(user_input: str) -> dict | None:
 
     try:
         prompt = f'Entrada: "{user_input}"{historico_texto}\n\nResponda APENAS com JSON válido:'
-        res = requests.post(
+        t0 = time.perf_counter()
+        data = _post_chat(
             "https://api.groq.com/openai/v1/chat/completions",
-            json={
-                "model": "llama-3.1-8b-instant",
+            {
+                "model": GROQ_MODEL,
                 "messages": [
                     {"role": "system", "content": INTENT_SYSTEM_PROMPT},
                     {"role": "user", "content": prompt},
@@ -121,11 +139,12 @@ def classify_intent(user_input: str) -> dict | None:
                 "max_tokens": 320,
                 "response_format": {"type": "json_object"},
             },
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+            {"Authorization": f"Bearer {GROQ_API_KEY}"},
             timeout=12,
         )
-        res.raise_for_status()
-        content = res.json()["choices"][0]["message"]["content"].strip()
+        elapsed = (time.perf_counter() - t0) * 1000
+        stats.set_llm("groq", GROQ_MODEL, data.get("usage"), elapsed)
+        content = data["choices"][0]["message"]["content"].strip()
         if not content:
             return None
 

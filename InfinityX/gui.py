@@ -16,10 +16,12 @@ from __future__ import annotations
 import queue
 import sys
 import threading
+import time
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import scrolledtext
 
+import stats
 from actions import iniciar_scheduler_lembretes
 from config import MAX_HISTORY
 from memory import (
@@ -184,11 +186,15 @@ class InfinityGUI:
         self.chat.configure(state="disabled")
         self.chat.see("end")
 
-    def _mensagem_bot(self, texto: str, fonte: str | None = None) -> None:
+    def _mensagem_bot(self, texto: str, fonte: str | None = None,
+                       rodape: str | None = None) -> None:
         self.chat.configure(state="normal")
         rotulo = "Infinity" if not fonte else f"Infinity · {fonte}"
         self.chat.insert("end", f"{rotulo}\n", "meta")
-        self.chat.insert("end", f" {texto} \n\n", "bot")
+        self.chat.insert("end", f" {texto} \n", "bot")
+        if rodape:
+            self.chat.insert("end", f"  {rodape}\n", "meta")
+        self.chat.insert("end", "\n")
         self.chat.configure(state="disabled")
         self.chat.see("end")
 
@@ -238,10 +244,20 @@ class InfinityGUI:
 
     def _worker(self, texto: str) -> None:
         try:
+            stats.reset()
+            t0 = time.perf_counter()
             dec = analisar(texto)
             resposta = executar_acao(dec)
+            total_ms = (time.perf_counter() - t0) * 1000
+
+            if stats.LAST["source"] is None:
+                stats.set_local(dec.get("source") or "local", total_ms)
+            else:
+                stats.LAST["elapsed_ms"] = round(total_ms, 1)
+
             fonte = dec.get("source") or dec.get("action", "?")
-            self._fila_respostas.put((resposta or "(sem resposta)", str(fonte)))
+            rodape = stats.format_footer()
+            self._fila_respostas.put((resposta or "(sem resposta)", str(fonte), rodape))
 
             MEMORIA["historico"].append({
                 "ent": texto,
@@ -255,16 +271,16 @@ class InfinityGUI:
             except Exception:
                 pass
         except Exception as exc:  # noqa: BLE001
-            self._fila_respostas.put((f"__ERRO__{exc}", "erro"))
+            self._fila_respostas.put((f"__ERRO__{exc}", "erro", ""))
 
     def _poll_respostas(self) -> None:
         try:
             while True:
-                resposta, fonte = self._fila_respostas.get_nowait()
+                resposta, fonte, rodape = self._fila_respostas.get_nowait()
                 if resposta.startswith("__ERRO__"):
                     self._mensagem_erro(resposta.replace("__ERRO__", ""))
                 else:
-                    self._mensagem_bot(resposta, fonte=fonte)
+                    self._mensagem_bot(resposta, fonte=fonte, rodape=rodape)
                 self._a_processar = False
                 self.btn_enviar.config(state="normal", text="Enviar")
                 self.lbl_estado.config(text="● online", fg="#4ade80")

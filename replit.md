@@ -5,12 +5,13 @@ Assistente local autônoma em Python com IA interpretativa (Groq + LM Studio + f
 ## Estrutura (pasta `InfinityX/`)
 
 ```
-infinityx.py        # ponto de entrada CLI (REPL no terminal)
+infinityx.py        # ponto de entrada CLI (REPL com layout colorido ANSI)
 gui.py              # ponto de entrada GUI (janela Tkinter estilo chat)
 config.py           # constantes, .env, mapeamentos, prompt do sistema, deps opcionais
 memory.py           # MEMORIA, PALAVRAS, TIMERS — load/save em JSON
 utils.py            # safe_eval, resolve_path, categorize_file, get_user_home
 llm.py              # chamar_groq, chamar_lm_studio, chamar_perplexity, classify_intent
+stats.py            # métricas (origem, tokens, tempo) da última interacção
 actions/            # pacote com ~80 ações (sistema, arquivos, web, mídia, last.fm, etc.)
 parser.py           # pre_analyze, checar_palavra, analisar, executar_acao, _resumo_conversa
 requirements.txt    # dependências Python
@@ -27,6 +28,12 @@ palavras.json       # dicionário pessoal
 5. `classify_intent` via Groq (`llama-3.1-8b-instant`) com confiança ≥ 0.85.
 6. Fallback por regex (sair, ajuda, clima/previsão N dias, disk_usage, abrir apps conhecidos, matemática).
 7. Último recurso: `buscar_info` (LM Studio → Groq → Perplexity).
+
+### Métricas de tempo e tokens (`stats.py`)
+
+Cada interacção actualiza um dict global `stats.LAST` com a origem (`groq`, `lm_studio`, `perplexity`, `pre_analyze`, `guardrail`, etc.), o modelo, os tokens (entrada/saída/total quando aplicável) e o tempo decorrido em ms. A CLI e a GUI lêem `stats.format_footer()` e mostram-no por baixo de cada resposta — ex.: `groq · llama-3.1-8b-instant · 412 tok (320↑ 92↓) · 842ms`.
+
+A CLI (`infinityx.py`) usa cores ANSI (no Windows activa `ENABLE_VIRTUAL_TERMINAL_PROCESSING`), banner com `═`, separadores `─` por turno, hora à frente do nome de cada interlocutor e indentação das respostas.
 
 ### Clima e previsão
 
