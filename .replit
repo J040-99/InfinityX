@@ -18,12 +18,12 @@ args = "Smoke test"
 name = "Smoke test"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd InfinityX && python -c \"import config, memory, utils, llm, actions, parser, infinityx; print('InfinityX modulos importam OK'); print('Acoes registradas:', sum(1 for n in dir(actions) if n.startswith('action_')))\""
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd InfinityX && python -c \"import py_compile, config, memory, utils, llm, actions, parser, infinityx; py_compile.compile('gui.py', doraise=True); print('InfinityX modulos importam OK + gui.py compila'); print('Acoes registradas:', sum(1 for n in dir(actions) if n.startswith('action_')))\""
 
 [nix]
 channel = "stable-25_05"
