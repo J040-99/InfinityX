@@ -13,6 +13,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 LASTFM_API_KEY = os.getenv("LASTFM_API_KEY", "")
 LASTFM_USERNAME = os.getenv("LASTFM_USERNAME", "")
+LASTFM_SHARED_SECRET = os.getenv("LASTFM_SHARED_SECRET", "")
+LASTFM_SESSION_FILE = "lastfm_session.json"
 LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1/chat/completions")
 
 MEMORIA_FILE = "memory.json"
@@ -167,6 +169,10 @@ Postura: amiga prestável; antecipa necessidades em vez de pedir confirmação.
 - lastfm_similar_artist: artistas semelhantes (params.artista, params.limite opcional).
 - lastfm_similar_track: músicas semelhantes (params.artista, params.track, params.limite opcional).
 - lastfm_artist_info: bio e estatísticas de um artista (params.artista).
+- lastfm_setup: liga/autoriza a conta Last.fm para activar scrobbling (sem params; primeiro chamada abre browser, segunda chamada finaliza).
+- lastfm_logout: remove a sessão Last.fm guardada (sem params).
+- lastfm_scrobble: marca uma música como ouvida no Last.fm (params.artista, params.track, params.album opcional, params.timestamp opcional).
+- lastfm_now_playing_set: anuncia o que estás a tocar agora (params.artista, params.track, params.album opcional).
 
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:

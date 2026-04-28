@@ -9,14 +9,87 @@ incluído aqui por requerer credenciais sensíveis; pode ser adicionado
 mais tarde.
 """
 
+import hashlib
 import json
+import os
+import time
 import urllib.parse
 import urllib.request
+import webbrowser
 from urllib.error import HTTPError, URLError
 
-from config import LASTFM_API_KEY, LASTFM_USERNAME
+from config import (
+    LASTFM_API_KEY,
+    LASTFM_SESSION_FILE,
+    LASTFM_SHARED_SECRET,
+    LASTFM_USERNAME,
+)
 
 LASTFM_API = "https://ws.audioscrobbler.com/2.0/"
+LASTFM_SESSION_KEY: str | None = None
+
+
+def _load_session() -> str | None:
+    global LASTFM_SESSION_KEY
+    if LASTFM_SESSION_KEY:
+        return LASTFM_SESSION_KEY
+    try:
+        if os.path.exists(LASTFM_SESSION_FILE):
+            with open(LASTFM_SESSION_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                LASTFM_SESSION_KEY = data.get("key")
+                return LASTFM_SESSION_KEY
+    except (IOError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def _save_session(key: str, name: str) -> None:
+    global LASTFM_SESSION_KEY
+    LASTFM_SESSION_KEY = key
+    try:
+        with open(LASTFM_SESSION_FILE, "w", encoding="utf-8") as f:
+            json.dump({"key": key, "name": name}, f)
+    except IOError:
+        pass
+
+
+def _sign(params: dict) -> str:
+    """Calcula api_sig conforme spec Last.fm (sem 'format' e 'callback')."""
+    pares = "".join(f"{k}{params[k]}" for k in sorted(params)
+                    if k not in {"format", "callback"})
+    base = pares + (LASTFM_SHARED_SECRET or "")
+    return hashlib.md5(base.encode("utf-8")).hexdigest()
+
+
+def _post_signed(method: str, **params) -> dict | str:
+    if not LASTFM_SHARED_SECRET:
+        return "❌ Define LASTFM_SHARED_SECRET em InfinityX/.env"
+    base = {"method": method, "api_key": LASTFM_API_KEY}
+    base.update({k: v for k, v in params.items() if v is not None})
+    base["api_sig"] = _sign(base)
+    base["format"] = "json"
+    body = urllib.parse.urlencode(base).encode("utf-8")
+    try:
+        req = urllib.request.Request(
+            LASTFM_API, data=body,
+            headers={"User-Agent": "InfinityX/1.0",
+                     "Content-Type": "application/x-www-form-urlencoded"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+    except HTTPError as e:
+        try:
+            err = json.loads(e.read().decode())
+            return f"❌ Last.fm: {err.get('message', e.reason)}"
+        except Exception:
+            return f"❌ Last.fm HTTP {e.code}: {e.reason}"
+    except (URLError, OSError, json.JSONDecodeError) as e:
+        return f"❌ Last.fm: {e}"
+    if isinstance(data, dict) and data.get("error"):
+        return f"❌ Last.fm: {data.get('message', 'erro')}"
+    return data
+
 
 PERIODS = {"overall", "7day", "1month", "3month", "6month", "12month"}
 KINDS = {"tracks": "user.gettoptracks",
@@ -216,3 +289,101 @@ def action_lastfm_artist_info(artista: str) -> str:
     if bio:
         partes.append(bio)
     return "\n".join(partes)
+
+
+# ----- Autenticação (desktop auth flow) -----
+def action_lastfm_setup() -> str:
+    """Inicia o auth flow: pede um token, abre o browser para autorizares,
+    e finaliza com 'lastfm confirmar' (ou volta a chamar setup) que troca
+    o token pela session key permanente."""
+    if err := _check_key():
+        return err
+    if not LASTFM_SHARED_SECRET:
+        return "❌ Define LASTFM_SHARED_SECRET em InfinityX/.env"
+    pendente = os.environ.get("INFINITYX_LASTFM_TOKEN")
+    if pendente:
+        data = _post_signed("auth.getSession", token=pendente)
+        if isinstance(data, str):
+            return f"{data}\n💡 Se ainda não autorizaste no browser, fá-lo e tenta de novo."
+        sess = data.get("session", {})
+        key = sess.get("key")
+        nome = sess.get("name", "?")
+        if not key:
+            return "❌ Sem session key na resposta"
+        _save_session(key, nome)
+        os.environ.pop("INFINITYX_LASTFM_TOKEN", None)
+        return f"✅ Last.fm ligado como {nome}. Scrobbling activo."
+    data = _call("auth.getToken")
+    if isinstance(data, str):
+        return data
+    token = data.get("token")
+    if not token:
+        return "❌ Não obtive token"
+    os.environ["INFINITYX_LASTFM_TOKEN"] = token
+    auth_url = f"https://www.last.fm/api/auth/?api_key={LASTFM_API_KEY}&token={token}"
+    try:
+        webbrowser.open_new_tab(auth_url)
+    except webbrowser.Error:
+        pass
+    return (f"🔑 Autoriza no browser:\n{auth_url}\n\n"
+            "Depois de carregares 'Yes, allow access', diz 'liga o lastfm' "
+            "outra vez para finalizar.")
+
+
+def action_lastfm_logout() -> str:
+    global LASTFM_SESSION_KEY
+    LASTFM_SESSION_KEY = None
+    try:
+        if os.path.exists(LASTFM_SESSION_FILE):
+            os.remove(LASTFM_SESSION_FILE)
+    except OSError:
+        pass
+    return "🔓 Sessão Last.fm removida"
+
+
+# ----- Scrobbling -----
+def action_lastfm_scrobble(artist: str, track: str,
+                           album: str | None = None,
+                           timestamp: int | None = None) -> str:
+    if err := _check_key():
+        return err
+    sk = _load_session()
+    if not sk:
+        return "❌ Sem sessão Last.fm. Diz 'liga o lastfm' primeiro."
+    if not (artist and track):
+        return "❌ Indica artista e música"
+    ts = int(timestamp) if timestamp else int(time.time())
+    params = {"artist": artist.strip(), "track": track.strip(),
+              "timestamp": ts, "sk": sk}
+    if album:
+        params["album"] = album.strip()
+    data = _post_signed("track.scrobble", **params)
+    if isinstance(data, str):
+        return data
+    accepted = data.get("scrobbles", {}).get("@attr", {}).get("accepted", "0")
+    if str(accepted) == "0":
+        ignored = data.get("scrobbles", {}).get("scrobble", {}).get("ignoredMessage", {})
+        return f"⚠️ Não scrobbled: {ignored.get('#text', 'rejeitado')}"
+    return f"📡 Scrobbled: {track} — {artist}"
+
+
+def action_lastfm_now_playing_set(artist: str, track: str,
+                                  album: str | None = None) -> str:
+    if err := _check_key():
+        return err
+    sk = _load_session()
+    if not sk:
+        return "❌ Sem sessão Last.fm. Diz 'liga o lastfm' primeiro."
+    if not (artist and track):
+        return "❌ Indica artista e música"
+    params = {"artist": artist.strip(), "track": track.strip(), "sk": sk}
+    if album:
+        params["album"] = album.strip()
+    data = _post_signed("track.updateNowPlaying", **params)
+    if isinstance(data, str):
+        return data
+    return f"▶️ A tocar agora: {track} — {artist}"
+
+
+def has_session() -> bool:
+    return bool(_load_session())

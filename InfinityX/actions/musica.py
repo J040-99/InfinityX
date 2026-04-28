@@ -8,10 +8,14 @@ Inclui:
     biblioteca não está disponível.
 """
 
+import threading
+import time
 import urllib.parse
 import webbrowser
 
 from config import SYSTEM_AUTO_AVAILABLE
+
+from . import lastfm as _lastfm
 
 if SYSTEM_AUTO_AVAILABLE:
     import pyautogui
@@ -108,6 +112,25 @@ def action_youtube_music_shuffle() -> str:
         return "🎵 YouTube Music aberto"
 
 
+def _auto_scrobble(artist: str, track: str, album: str | None = None) -> None:
+    """Se houver sessão Last.fm, marca como now-playing e agenda scrobble."""
+    if not (_lastfm.has_session() and artist and track):
+        return
+    try:
+        _lastfm.action_lastfm_now_playing_set(artist, track, album)
+    except Exception:
+        pass
+
+    def delayed() -> None:
+        time.sleep(35)
+        try:
+            _lastfm.action_lastfm_scrobble(artist, track, album)
+        except Exception:
+            pass
+
+    threading.Thread(target=delayed, daemon=True).start()
+
+
 def action_yt_music_play(query: str) -> str:
     """Procura e abre directamente a primeira música no YT Music."""
     if not query or not query.strip():
@@ -121,10 +144,17 @@ def action_yt_music_play(query: str) -> str:
                 top = results[0]
                 video_id = top.get("videoId")
                 titulo = top.get("title", q)
-                artistas = ", ".join(a.get("name", "") for a in top.get("artists", []) if a.get("name"))
+                artistas_lista = [a.get("name", "") for a in top.get("artists", []) if a.get("name")]
+                artistas = ", ".join(artistas_lista)
+                album = top.get("album", {}).get("name") if isinstance(top.get("album"), dict) else None
                 if video_id:
                     webbrowser.open_new_tab(f"https://music.youtube.com/watch?v={video_id}")
-                    return f"🎶 A tocar: {titulo}" + (f" — {artistas}" if artistas else "")
+                    artista_principal = artistas_lista[0] if artistas_lista else ""
+                    if artista_principal:
+                        _auto_scrobble(artista_principal, titulo, album)
+                    sufixo = f" — {artistas}" if artistas else ""
+                    scrobble_marca = " 📡" if _lastfm.has_session() else ""
+                    return f"🎶 A tocar: {titulo}{sufixo}{scrobble_marca}"
         except Exception:
             pass
     url = f"https://music.youtube.com/search?q={urllib.parse.quote(q)}"

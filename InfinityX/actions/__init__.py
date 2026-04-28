@@ -23,8 +23,12 @@ from .midia import (
 )
 from .lastfm import (
     action_lastfm_artist_info,
+    action_lastfm_logout,
     action_lastfm_now_playing,
+    action_lastfm_now_playing_set,
     action_lastfm_recent,
+    action_lastfm_scrobble,
+    action_lastfm_setup,
     action_lastfm_similar_artist,
     action_lastfm_similar_track,
     action_lastfm_top,

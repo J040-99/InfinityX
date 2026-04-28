@@ -190,6 +190,10 @@ def analisar(entrada: str) -> dict:
             "lastfm_similar_artist": "lastfm_similar_artist",
             "lastfm_similar_track": "lastfm_similar_track",
             "lastfm_artist_info": "lastfm_artist_info",
+            "lastfm_setup": "lastfm_setup",
+            "lastfm_logout": "lastfm_logout",
+            "lastfm_scrobble": "lastfm_scrobble",
+            "lastfm_now_playing_set": "lastfm_now_playing_set",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -408,6 +412,15 @@ def _build_action_table(dec: dict) -> dict:
         ),
         "lastfm_artist_info": lambda: actions.action_lastfm_artist_info(
             dec.get("artista", "")
+        ),
+        "lastfm_setup": actions.action_lastfm_setup,
+        "lastfm_logout": actions.action_lastfm_logout,
+        "lastfm_scrobble": lambda: actions.action_lastfm_scrobble(
+            dec.get("artista", ""), dec.get("track", ""),
+            dec.get("album"), dec.get("timestamp"),
+        ),
+        "lastfm_now_playing_set": lambda: actions.action_lastfm_now_playing_set(
+            dec.get("artista", ""), dec.get("track", ""), dec.get("album"),
         ),
     }
 
