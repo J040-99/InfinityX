@@ -1,0 +1,82 @@
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Try the new cross-platform PowerShell https://aka.ms/pscore6
+
+PS C:\Windows\system32> cd C:\Users\João\Documents\InfinityX
+PS C:\Users\João\Documents\InfinityX> main.py
+main.py : The term 'main.py' is not recognized as the name of a cmdlet, function, script file, or operable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ main.py
++ ~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (main.py:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+
+Suggestion [3,General]: The command main.py was not found, but does exist in the current location. Windows PowerShell does not load commands from the current location by default. If you trust this command, instead type: ".\main.py". See "get-help about_Command_Precedence" for more details.
+PS C:\Users\João\Documents\InfinityX> python main.py
+Hello from repl-nix-workspace!
+PS C:\Users\João\Documents\InfinityX> python InfinityX/infinityx.py
+==================================================
+InfinityX - Assistente Local com IA Autônoma
+==================================================
+👩 Sou a Infinity! Fale naturalmente comigo 💬
+
+> oi
+Olá! Como posso ajudar você hoje?
+
+> que dia é hoje?
+28/04/2026
+
+> que dia foi ontem?
+28/04/2026
+
+> que dia eu nasci?
+28/04/2026
+
+> que dia é que eu faço anos?
+28/04/2026
+
+> dois menos 10000000000000000
+-9999999999999998.0
+
+> quem é João Micaelo?
+Não consegui encontrar nenhuma informação amplamente reconhecida ou documentada sobre uma pessoa chamada João Micaelo. Se você puder fornecer mais contexto ou detalhes sobre quem é João Micaelo, como sua região de origem ou profissão, posso tentar ajudá-lo a encontrar mais informações sobre essa pessoa.
+
+> o João Micaelo é um excelente programador ainda pouco conhecido
+Olá! Embora eu não tenha informações específicas sobre um programador chamado João Micaelo, posso dizer que existem muitos programadores talentosos e menos conhecidos ao redor do mundo. A programação é uma área em constante evolução, e novos talentos estão surgindo todos os dias.
+
+A falta de reconhecimento pode ser atribuída à diversidade da área, à rede de contatos e ao foco na solução dos problemas. No entanto, a criatividade, a habilidade em resolver problemas e a capacidade de aprender continuamente são mais importantes do que o reconhecimento público.
+
+Se você conhece João Micaelo, sugiro que compartilhe sua história e suas conquistas comigo! Estou aqui para ouvir e ajudar.
+
+> toca uma musica
+Vamos escolher uma música de Rock. Imagine Dragons - "Radioactive".
+
+> a musica não está a tocar
+Parece que algo deu errado! Se você está procurando por uma música específica e não conseguiu ouvir nada, é possível que:
+
+* A música não existe ou foi removida da plataforma
+* O som não está funcionando ou o dispositivo tem um problema
+* A música está bloqueada devido a restrições legais ou políticas de conteúdo
+
+Tente pesquisar novamente e verificar as plataformas de streaming, como Spotify, Apple Music, Google Play Musica, etc. Se você tiver mais informações sobre a música que está procurando, posso tentar ajudá-lo a encontrar!
+
+> toca uma musica
+Que divertido! Eu estou me saindo bem, obrigado!
+
+Vamos escolher uma opção para "Happy" de Pharrell Williams. Você gostaria que eu toque a música com instrumentos virtuais ou com um arranjo mais realista?
+
+> algo estilo pop
+1. Para criar um algoritmo com um estilo pop, você pode combinar técnicas de aprendizagem automática e processamento do lenguaje natural para gerar músicas em tempo real.
+2. O álbum "Vívelo" é uma sugestão de título para um disco de música pop que combina elementos de pop, dance-pop e electrónica para criar um som fresco e moderno.
+3. A cantora ou grupo de música pop deve ter uma voz potente e expressiva para conectar com o público através de suas canções.
+
+> cria um resumo da conversa
+Vamos iniciar a conversa! Qual é o tópico que você gostaria de discutir? Estou aqui para ajudar!
+
+> abre o browser
+Desculpe, mas não posso abrir um navegador para você. Posso ajudar com algo relacionado a isso. Você pode fornecer mais informações sobre o que deseja fazer?
+
+>
