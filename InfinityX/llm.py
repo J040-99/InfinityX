@@ -58,7 +58,7 @@ def _build_messages_with_history(prompt: str) -> list:
     return messages
 
 
-def chamar_groq(prompt: str, tentativa: int = 1) -> str:
+def chamar_groq(prompt: str, tentativa: int = 1, model: str | None = None) -> str:
     if not GROQ_API_KEY or not REQUESTS_AVAILABLE:
         raise RuntimeError("GROQ_API_KEY não configurada")
     t0 = time.perf_counter()
@@ -66,7 +66,7 @@ def chamar_groq(prompt: str, tentativa: int = 1) -> str:
     data = _post_chat(
         "https://api.groq.com/openai/v1/chat/completions",
         {
-            "model": GROQ_MODEL,
+            "model": model or GROQ_MODEL,
             "messages": messages,
             "temperature": 0.3 if tentativa == 1 else 0.5,
             "max_tokens": 512,
@@ -75,7 +75,7 @@ def chamar_groq(prompt: str, tentativa: int = 1) -> str:
         timeout=30,
     )
     elapsed = (time.perf_counter() - t0) * 1000
-    stats.set_llm("groq", GROQ_MODEL, data.get("usage"), elapsed)
+    stats.set_llm("groq", model or GROQ_MODEL, data.get("usage"), elapsed)
     return data["choices"][0]["message"]["content"].strip()
 
 
