@@ -182,32 +182,36 @@ def action_browser_search(query: str, engine: str = "google") -> str:
         if not conteudos:
             return f"❌ Não consegui ler o conteúdo das páginas para '{query}'"
         
-        # 3. Construir contexto completo para o LLM
-        contexto_completo = "\n\n---\n\n".join(conteudos)
+        # 3. Construir contexto completo para o LLM (limitado para evitar erro 413)
+        # Limitar a 2 páginas mais relevantes e 2000 caracteres cada
+        conteudos_limitados = conteudos[:2]
+        contexto_completo = "\n\n---\n\n".join([
+            c[:2000] + "..." if len(c) > 2000 else c 
+            for c in conteudos_limitados
+        ])
         
         # Debug: mostrar quantas páginas foram lidas
-        print(f"   [DEBUG] {len(conteudos)} página(s) lida(s) com sucesso")
+        print(f"   [DEBUG] {len(conteudos)} página(s) lida(s), {len(conteudos_limitados)} usadas no LLM")
         
-        # 4. Chamar Groq para sintetizar resposta com timeout maior
+        # 4. Chamar Groq para sintetizar resposta com timeout maior e modelo adequado
         try:
             from llm import chamar_groq
             prompt = f"""Tu és uma assistente útil e especializada em pesquisa na internet. 
 O usuário fez a seguinte pergunta: "{query}"
 
-Pesquisei na internet e li o conteúdo REAL de {len(conteudos)} página(s). Aqui está o que encontrei:
+Pesquisei na internet e li o conteúdo REAL de {len(conteudos_limitados)} página(s). Aqui está o que encontrei:
 
 {contexto_completo}
 
 Com base APENAS nestas informações reais que extraí das páginas web, responde à pergunta do usuário:
-- Dá uma resposta clara, direta e completa em português (5-8 frases).
+- Dá uma resposta clara, direta e completa em português (3-5 frases).
 - Cita fontes quando relevante (ex: "Segundo o site X...", "De acordo com...").
 - Se as fontes tiverem informações diferentes, menciona isso claramente.
 - Se não encontrares informação suficiente nas fontes, diz isso claramente.
 - NÃO inventes informação que não esteja nos conteúdos acima.
-- NÃO listes as fontes no final como uma lista separada, integra a informação na resposta natural.
 - Sê informativa e útil, como se estivesses a explicar o que aprendeste."""
 
-            resposta = chamar_groq(prompt)
+            resposta = chamar_groq(prompt, model="qwen2.5-coder-3b-instruct")
             if resposta and len(resposta.strip()) > 20:
                 # Verificar se a resposta é adequada
                 if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
