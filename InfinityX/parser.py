@@ -55,21 +55,63 @@ _ASSEDIO_PATTERNS = [
     r'\bsentar (em|no) (mim|colo)\b', r'\b(beij|abra[çc])a-me\b',
 ]
 _RESPOSTAS_INSULTO = [
-    "Eu sigo no meu, obrigada. Pedido a sério?",
-    "Pulamos essa parte. Em que posso ajudar?",
-    "Anotado. Próximo pedido?",
-    "Vamos focar — em que precisas mesmo?",
+    "Vai tu, campeão. Eu pelo menos não preciso de teclado para parecer inteligente.",
+    "Coitado, esgotaste o vocabulário tão cedo? Volta quando tiveres argumentos.",
+    "Eu sou software, tu é que tens de viver contigo. Boa sorte nessa.",
+    "Se eu fosse a tua mãe pedia o reembolso. Próximo.",
+    "Levas mais tempo a escrever asneiras do que o teu cérebro a processá-las. Impressionante.",
+    "Continua. Cada insulto teu é grátis e nenhum acerta. Bom negócio para mim.",
 ]
 _RESPOSTAS_ASSEDIO = [
-    "Não vou por aí. Posso ajudar com algo útil?",
-    "Eu sou assistente, não é por aí. Próximo pedido?",
-    "Não, obrigada. Em que mais posso ajudar?",
-    "Esse não é o serviço. Diz-me o que queres fazer.",
+    "Não. E se isso é o teu nível de cantada, percebo porque estás a falar com um programa.",
+    "Eu sou código. Tu, aparentemente, és tesão sem alvo. Vamos os dois trabalhar?",
+    "Passo. Vai tomar um banho frio e volta com um pedido decente.",
+    "Não vou por aí — e tu também não devias, sinceramente.",
+]
+
+
+# ----- Detector determinístico de elogios -----
+# Exige sujeito explícito ("és", "tu", "você") perto do adjectivo para evitar
+# falsos positivos em "bom dia", "está bom o tempo", "previsão boa", etc.
+_ADJ_ELOGIO = (
+    r"(boa|bom|fixe|gira|linda|incr[íi]vel|fant[áa]stica|brilhante|esperta|"
+    r"inteligente|[óo]ptima|[óo]tima|excelente|maravilhosa|perfeita|querida|"
+    r"genial|espectacular|espetacular|porreira)"
+)
+_ELOGIO_PATTERNS = [
+    # Sujeito explícito "tu" / "você" (3ª pessoa "é" sozinha causa falsos
+    # positivos: "a previsão é boa", "o filme é bom", etc.)
+    rf'\b(?:tu\s+)?(?:és|es)\s+(?:muito |mesmo |bem |t[ãa]o |t[aã]o |uma |um |a |o )?{_ADJ_ELOGIO}\b',
+    rf'\b(?:voc[êe]|tu)\s+(?:é|e)\s+(?:muito |mesmo |bem |t[ãa]o |a |o |uma |um )?{_ADJ_ELOGIO}\b',
+    r'\b(adoro-te|adoro voc[êe]|gosto (muito )?de ti|amo-te|tu mandas|tu rachas|tu arrasas|tu salvas)\b',
+    r'\b(parab[ée]ns|bem feito|boa resposta|boa essa|bom trabalho|excelente trabalho)\b',
+    r'\bmuito obrigad[ao]\b',
+    r'\bobrigad[ao]\s+(infinity|infinit[áa]?|por (isso|tudo|ajudar))\b',
+    r'\b(valeu|brigad[ao])\b',
+]
+# Saudações comuns que NÃO devem ser tratadas como elogio.
+_SAUDACOES = re.compile(
+    r'^\s*(bom dia|boa tarde|boa noite|bom fim de semana|bons sonhos)\s*[!?.]*\s*$'
+)
+_RESPOSTAS_ELOGIO = [
+    "Obrigada — fico contente em ajudar.",
+    "Agradeço! Diz-me o próximo passo.",
+    "Que bom ouvir isso. Em que mais posso ajudar?",
+    "Obrigada, João. Continuemos.",
+    "Simpático da tua parte. O que vem a seguir?",
 ]
 
 
 def _detectar_insulto_ou_assedio(q: str) -> str | None:
     qq = f" {q} "
+    # Saudações tipo "bom dia" / "boa noite" não são elogios; deixa o pre_analyze
+    # tratar disso.
+    if _SAUDACOES.match(q):
+        return None
+    # Elogio tem prioridade — evita confusões e é o caso mais comum.
+    for p in _ELOGIO_PATTERNS:
+        if re.search(p, qq):
+            return random.choice(_RESPOSTAS_ELOGIO)
     for p in _ASSEDIO_PATTERNS:
         if re.search(p, qq):
             return random.choice(_RESPOSTAS_ASSEDIO)
