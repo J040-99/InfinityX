@@ -191,6 +191,24 @@ Quando o utilizador pede para TOCAR/PÔR/COLOCAR/OUVIR música, NUNCA respondas 
 - lastfm_scrobble: marca uma música como ouvida no Last.fm (params.artista, params.track, params.album opcional, params.timestamp opcional).
 - lastfm_now_playing_set: anuncia o que estás a tocar agora (params.artista, params.track, params.album opcional).
 
+## PERCEPCAO (microfone e camara)
+- ouvir: liga o microfone e devolve apenas a transcricao (params.duracao opcional em segundos, params.idioma opcional ex.: 'pt-PT').
+- ouvir_e_responder: ouve o microfone, transcreve e processa o que foi dito como se tivesse sido escrito (mesmos params do ouvir).
+- ver: tira uma foto pela webcam e descreve o que ve (params.prompt opcional para guiar o que olhar; params.camera_idx opcional, default 0).
+- descrever_imagem: analisa um ficheiro de imagem local (params.path obrigatorio; params.prompt opcional).
+Quando o utilizador pedir 'ouve-me', 'liga o microfone', 'modo voz' -> ouvir_e_responder.
+Quando pedir 'o que ves', 'olha para isto', 'tira uma foto' -> ver.
+Quando pedir 'descreve a imagem X.png', 'analisa esta foto', 'o que ha na imagem Y' -> descrever_imagem.
+
+## PERCEPCAO (microfone e camara)
+- ouvir: liga o microfone e devolve apenas a transcricao (params.duracao opcional em segundos, params.idioma opcional ex.: 'pt-PT').
+- ouvir_e_responder: ouve o microfone, transcreve e processa o que foi dito como se tivesse sido escrito (mesmos params do ouvir).
+- ver: tira uma foto pela webcam e descreve o que ve (params.prompt opcional para guiar o que olhar; params.camera_idx opcional, default 0).
+- descrever_imagem: analisa um ficheiro de imagem local (params.path obrigatorio; params.prompt opcional).
+Quando o utilizador pedir 'ouve-me', 'liga o microfone', 'modo voz' -> ouvir_e_responder.
+Quando pedir 'o que ves', 'olha para isto', 'tira uma foto' -> ver.
+Quando pedir 'descreve a imagem X.png', 'analisa esta foto', 'o que ha na imagem Y' -> descrever_imagem.
+
 ## CONTRATO DE SAÍDA
 Devolve UM ÚNICO JSON, sem markdown, sem comentários, no formato:
 {"action":"<nome>","params":{...},"confidence":0.0_a_1.0}

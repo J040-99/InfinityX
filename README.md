@@ -12,7 +12,14 @@ memory.py           # MEMORIA, PALAVRAS, TIMERS — load/save em JSON
 utils.py            # safe_eval, resolve_path, categorize_file, get_user_home
 llm.py              # chamar_groq, chamar_lm_studio, chamar_perplexity, classify_intent
 stats.py            # métricas (origem, tokens, tempo) da última interacção
-actions/            # pacote com ~80 ações (sistema, arquivos, web, mídia, last.fm, etc.)
+actions/            # pacote de ações agrupadas por categoria
+  midia.py          # clipboard, teclado/rato, TTS (action_speak)
+  percepcao.py      # ouvir (microfone) + ver (câmara/imagens via Groq vision)
+  musica.py         # YouTube Music + media keys
+  lastfm.py         # integração Last.fm
+  produtividade.py  # notas, lembretes, palavras, todos
+  sistema.py        # clima, hora, sysinfo, bateria, rede, disco
+  arquivos.py / util.py / web.py # ficheiros, utilitários e browser
 parser.py           # pre_analyze, checar_palavra, analisar, executar_acao, _resumo_conversa
 requirements.txt    # dependências Python
 memory.json         # histórico persistente
@@ -40,6 +47,16 @@ A CLI (`infinityx.py`) usa cores ANSI (no Windows activa `ENABLE_VIRTUAL_TERMINA
 `action_clima(cidade, amanha, dias)` usa duas APIs do OpenWeatherMap:
 - tempo actual via `/data/2.5/weather`
 - previsão (amanhã ou N dias, máx 5 no plano gratuito) via `/data/2.5/forecast` em `_previsao_openweather`. Para "amanhã" agrupa os 8 slots de 3h e mostra o slot mais próximo do meio-dia mais a min/max do dia.
+
+### Percepção (microfone e câmara)
+
+A Infinity sabe ouvir e ver:
+
+- **Ouvir**: gatilhos como `ouve-me`, `liga o microfone`, `modo voz` chamam `action_ouvir_e_responder`. Capturaáudio com `SpeechRecognition` (transcrição pelo Google Web Speech, grátis), passa o texto pelo mesmo `analisar`+`executar_acao` da CLI e devolve a resposta. Se faltar `pyaudio`/microfone, o utilizador recebe uma mensagem clara em vez de um stack trace.
+- **Ver**: gatilhos como `o que vês?`, `tira uma foto`, `olha para isto`, `usa a câmara` chamam `action_ver`. Captura uma frame da webcam com OpenCV, codifica em base64 e envia a `meta-llama/llama-4-scout-17b-16e-instruct` no Groq, devolvendo a descrição em português.
+- **Descrever uma imagem qualquer**: `descreve a imagem foto.png` ou `analisa esta imagem /tmp/x.jpg` enviam o ficheiro local à mesma API de visão.
+
+Dependências opcionais (já listadas em `requirements.txt`): `SpeechRecognition`, `pyaudio` (Windows: `pip install pipwin && pipwin install pyaudio`), `opencv-python`. Sem elas as restantes funcionalidades continuam intactas.
 
 ## Variáveis de ambiente (em `InfinityX/.env`)
 

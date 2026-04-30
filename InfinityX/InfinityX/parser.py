@@ -298,6 +298,16 @@ def checar_palavra(entrada: str) -> dict | None:
 
 # ----- Parser principal -----
 def analisar(entrada: str) -> dict:
+    """Wrapper que garante que `entrada` (o texto original do utilizador)
+    fica sempre presente na decisao para o executor poder reusa-lo (ex.:
+    accao "responder" com texto vazio precisa de saber o que perguntaste
+    para gerar a resposta)."""
+    dec = _analisar_core(entrada)
+    dec.setdefault("entrada", entrada)
+    return dec
+
+
+def _analisar_core(entrada: str) -> dict:
     e = entrada.strip().lower()
 
     if ck := checar_palavra(entrada):
@@ -307,6 +317,16 @@ def analisar(entrada: str) -> dict:
     # uma resposta curta no tom da Infinity em vez de divagações do classificador.
     if resp := _detectar_insulto_ou_assedio(e):
         return {"action": "responder", "texto": resp, "source": "guardrail"}
+
+    # Percepcao deterministica: microfone e camara antes do LLM, para o
+    # utilizador conseguir disparar estas accoes mesmo sem chave de API.
+    if re.fullmatch(r"\s*(ouve(?:-me)?|escuta(?:-me)?|p[oo]e-te a ouvir|modo voz|liga (?:o )?microfone)\s*[!?.]*\s*", e):
+        return {"action": "ouvir_e_responder"}
+    if re.search(r"\b(o que (?:v[eê]s|est[aá]s a ver)|olha (?:para )?(?:isto|aqui|c[aá])|tira (?:uma )?foto|usa a c[aâ]mara|liga a c[aâ]mara|abre a c[aâ]mara|ver com a c[aâ]mara)\b", e):
+        return {"action": "ver"}
+    m_img = re.match(r"^\s*(?:descreve(?:-me)?|analisa)\s+(?:a\s+|esta\s+|essa\s+)?(?:imagem|foto|figura)\s+(.+?)\s*$", e)
+    if m_img:
+        return {"action": "descrever_imagem", "path": m_img.group(1).strip().strip('"\'') }
 
     if pre := pre_analyze(entrada):
         if pre.startswith("__criar_arquivo:"):
@@ -495,6 +515,10 @@ def analisar(entrada: str) -> dict:
             "lastfm_scrobble": "lastfm_scrobble",
             "lastfm_now_playing_set": "lastfm_now_playing_set",
             "resumo_conversa": "resumo_conversa",
+            "ouvir": "ouvir",
+            "ouvir_e_responder": "ouvir_e_responder",
+            "ver": "ver",
+            "descrever_imagem": "descrever_imagem",
         }
         action_name = action_map.get(llm["action"])
         if action_name:
@@ -761,6 +785,18 @@ def _build_action_table(dec: dict) -> dict:
         ),
         "lastfm_now_playing_set": lambda: actions.action_lastfm_now_playing_set(
             dec.get("artista", ""), dec.get("track", ""), dec.get("album"),
+        ),
+        "ouvir": lambda: actions.action_ouvir(
+            dec.get("duracao", 6), dec.get("idioma", "pt-PT"),
+        ),
+        "ouvir_e_responder": lambda: actions.action_ouvir_e_responder(
+            dec.get("duracao", 6), dec.get("idioma", "pt-PT"),
+        ),
+        "ver": lambda: actions.action_ver(
+            dec.get("prompt"), dec.get("camera_idx", 0),
+        ),
+        "descrever_imagem": lambda: actions.action_descrever_imagem(
+            dec.get("path", ""), dec.get("prompt"),
         ),
     }
 

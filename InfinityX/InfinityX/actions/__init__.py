@@ -21,6 +21,12 @@ from .midia import (
     action_type_text,
     action_window_control,
 )
+from .percepcao import (
+    action_descrever_imagem,
+    action_ouvir,
+    action_ouvir_e_responder,
+    action_ver,
+)
 from .lastfm import (
     action_lastfm_artist_info,
     action_lastfm_logout,
