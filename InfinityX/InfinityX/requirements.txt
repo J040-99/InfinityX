@@ -21,3 +21,6 @@ pywinauto>=0.6.8 ; sys_platform == "win32"
 SpeechRecognition>=3.10.0
 opencv-python>=4.8.0
 beautifulsoup4>=4.12.0
+
+# Modo "live" no browser (servidor web)
+Flask>=3.0.0

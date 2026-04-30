@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Infinity — Live</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --input: #1f2530;
+    --accent: #7c5cff;
+    --accent-hover: #8f74ff;
+    --user-bubble: #2a2f3d;
+    --bot-bubble: #1a2332;
+    --text: #e8ecf1;
+    --muted: #8a93a6;
+    --error: #ff6b6b;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --border: #2a3142;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  body {
+    display: flex; flex-direction: column;
+  }
+
+  header {
+    background: var(--panel);
+    padding: 14px 22px;
+    display: flex; align-items: center; gap: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  header .avatar {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--accent);
+    color: white;
+    font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  header .who { display: flex; flex-direction: column; }
+  header .name { font-size: 17px; font-weight: 600; }
+  header .status { font-size: 12px; color: var(--ok); }
+  header .status.warn { color: var(--warn); }
+  header .status.err  { color: var(--error); }
+  header .spacer { flex: 1; }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 18px;
+    padding: 18px;
+    min-height: 0;
+  }
+  @media (max-width: 720px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .controls {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto;
+  }
+  .controls h2 {
+    margin: 0 0 4px 0; font-size: 13px;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted);
+  }
+
+  .toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--input);
+    padding: 10px 14px; border-radius: 10px;
+    cursor: pointer; user-select: none;
+    border: 1px solid var(--border);
+  }
+  .toggle .lbl { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+  .toggle .lbl .ico { font-size: 18px; }
+  .toggle input { display: none; }
+  .switch {
+    width: 40px; height: 22px;
+    background: #2c3243; border-radius: 999px;
+    position: relative; transition: background .15s ease;
+  }
+  .switch::after {
+    content: "";
+    position: absolute; top: 2px; left: 2px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #c5cbd9;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .toggle input:checked + .switch { background: var(--accent); }
+  .toggle input:checked + .switch::after {
+    transform: translateX(18px); background: white;
+  }
+  .toggle.disabled { opacity: .5; cursor: not-allowed; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field select, .field input[type=text] {
+    background: var(--input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px;
+  }
+  .field select:focus, .field input[type=text]:focus { outline: 1px solid var(--accent); }
+
+  button.btn {
+    background: var(--accent); color: white;
+    border: 0; border-radius: 10px;
+    padding: 10px 14px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+  }
+  button.btn:hover { background: var(--accent-hover); }
+  button.btn.secondary {
+    background: var(--input); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .video-wrap {
+    background: #000; border-radius: 12px;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .video-wrap video {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transform: scaleX(-1); /* espelho */
+  }
+  .video-wrap .badge {
+    position: absolute; top: 10px; left: 10px;
+    background: rgba(0,0,0,.55); color: white;
+    font-size: 11px; padding: 4px 8px; border-radius: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .video-wrap .badge .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--error);
+    animation: pulse 1.4s infinite;
+  }
+  .video-wrap.off { background: #11141a; }
+  .video-wrap.off::after {
+    content: "Câmara desligada"; color: var(--muted);
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .35; }
+  }
+
+  .stage {
+    display: flex; flex-direction: column; gap: 12px;
+    min-height: 0;
+  }
+
+  .chat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 220px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .msg { max-width: 80%; padding: 9px 13px; border-radius: 12px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); }
+  .msg.bot  { align-self: flex-start; background: var(--bot-bubble); border: 1px solid #1f2c40; }
+  .msg.bot.vision { border-color: #3d2f5e; }
+  .msg .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; gap: 6px; align-items: center; }
+  .msg .who .tag {
+    background: rgba(124,92,255,.18); color: #c8bbff;
+    padding: 1px 6px; border-radius: 4px; font-size: 10px;
+  }
+  .msg .footer { font-size: 11px; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .msg .interim { color: var(--muted); font-style: italic; }
+
+  .composer {
+    display: flex; gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px;
+  }
+  .composer input {
+    flex: 1;
+    background: var(--input); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 14px;
+  }
+  .composer input:focus { outline: 1px solid var(--accent); }
+  .composer button { background: var(--accent); color: white; border: 0; border-radius: 8px; padding: 0 16px; font-weight: 600; cursor: pointer; }
+  .composer button:hover { background: var(--accent-hover); }
+
+  .hint {
+    font-size: 12px; color: var(--muted); padding: 0 4px;
+  }
+  .hint.warn { color: var(--warn); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="avatar">∞</div>
+  <div class="who">
+    <div class="name">Infinity — Live</div>
+    <div id="status" class="status">● online</div>
+  </div>
+  <div class="spacer"></div>
+  <button id="clearBtn" class="btn secondary">Limpar conversa</button>
+</header>
+
+<main>
+  <aside class="controls">
+    <h2>Sentidos</h2>
+
+    <label class="toggle" id="micToggleLabel">
+      <span class="lbl"><span class="ico">🎤</span> Ouvir (microfone)</span>
+      <input type="checkbox" id="micToggle">
+      <span class="switch"></span>
+    </label>
+
+    <label class="toggle" id="camToggleLabel">
+      <span class="lbl"><span class="ico">👁️</span> Ver (câmara)</span>
+      <input type="checkbox" id="camToggle">
+      <span class="switch"></span>
+    </label>
+
+    <h2 style="margin-top:8px">Voz</h2>
+    <label class="toggle">
+      <span class="lbl"><span class="ico">🔊</span> Ler respostas</span>
+      <input type="checkbox" id="ttsToggle" checked>
+      <span class="switch"></span>
+    </label>
+
+    <div class="field">
+      <label for="lang">Idioma do microfone</label>
+      <select id="lang">
+        <option value="pt-PT" selected>Português (PT)</option>
+        <option value="pt-BR">Português (BR)</option>
+        <option value="en-US">English (US)</option>
+        <option value="es-ES">Español</option>
+      </select>
+    </div>
+
+    <h2 style="margin-top:8px">Visão</h2>
+    <div class="field">
+      <label for="visionInterval">Frequência</label>
+      <select id="visionInterval">
+        <option value="0">Manual (botão)</option>
+        <option value="5000">A cada 5 s</option>
+        <option value="10000" selected>A cada 10 s</option>
+        <option value="20000">A cada 20 s</option>
+        <option value="60000">A cada minuto</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="visionPrompt">Pista para a Infinity (opcional)</label>
+      <input type="text" id="visionPrompt" placeholder="ex.: o que estou a fazer?">
+    </div>
+    <button id="visionNow" class="btn">📷 Ver agora</button>
+
+    <p class="hint" id="hint">
+      Liga o microfone para a Infinity te ouvir; liga a câmara para ela te ver.
+    </p>
+  </aside>
+
+  <section class="stage">
+    <div class="video-wrap off" id="videoWrap">
+      <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <div class="chat" id="chat"></div>
+
+    <form class="composer" id="composer">
+      <input id="input" placeholder="Ou escreve um pedido aqui…" autocomplete="off">
+      <button type="submit">Enviar</button>
+    </form>
+  </section>
+</main>
+
+<canvas id="canvas" hidden></canvas>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const chat = $('chat');
+  const status = $('status');
+  const hint = $('hint');
+  const video = $('video');
+  const canvas = $('canvas');
+  const videoWrap = $('videoWrap');
+
+  const micToggle = $('micToggle');
+  const camToggle = $('camToggle');
+  const ttsToggle = $('ttsToggle');
+  const langSel = $('lang');
+  const intervalSel = $('visionInterval');
+  const visionPromptInput = $('visionPrompt');
+  const visionNow = $('visionNow');
+
+  let interimNode = null;
+  let camStream = null;
+  let visionTimer = null;
+  let busyVision = false;
+  let lastVisionAt = 0;
+
+  // ----- chat helpers -----
+  function setStatus(text, kind = 'ok') {
+    status.textContent = text;
+    status.className = 'status ' + (kind === 'warn' ? 'warn' : kind === 'err' ? 'err' : '');
+  }
+
+  function addUser(text) {
+    const el = document.createElement('div');
+    el.className = 'msg user';
+    el.innerHTML = `<div class="who">Tu</div>` + escapeHtml(text);
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function addBot(text, { source = 'local', footer = '', vision = false } = {}) {
+    const el = document.createElement('div');
+    el.className = 'msg bot' + (vision ? ' vision' : '');
+    const tag = source ? `<span class="tag">${escapeHtml(source)}</span>` : '';
+    el.innerHTML =
+      `<div class="who">Infinity ${tag}</div>` +
+      `<div class="body">${escapeHtml(text)}</div>` +
+      (footer ? `<div class="footer">${escapeHtml(footer)}</div>` : '');
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function showInterim(text) {
+    if (!interimNode) {
+      interimNode = document.createElement('div');
+      interimNode.className = 'msg user interim';
+      interimNode.innerHTML = `<div class="who">Tu (a falar…)</div>` + '<span class="interim"></span>';
+      chat.appendChild(interimNode);
+    }
+    interimNode.querySelector('.interim').textContent = text;
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function clearInterim() {
+    if (interimNode) {
+      interimNode.remove();
+      interimNode = null;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => (
+      { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+  }
+
+  // ----- TTS -----
+  function speak(text) {
+    if (!ttsToggle.checked) return;
+    if (!('speechSynthesis' in window)) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = (langSel.value || 'pt-PT');
+      u.rate = 1.0; u.pitch = 1.0;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  // ----- API -----
+  async function sendChat(text) {
+    addUser(text);
+    setStatus('● a pensar', 'warn');
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await r.json();
+      addBot(data.reply || '(sem resposta)', { source: data.source, footer: data.footer });
+      speak(data.reply || '');
+    } catch (e) {
+      addBot('❌ Erro de rede: ' + e, { source: 'erro' });
+    } finally {
+      setStatus('● online');
+    }
+  }
+
+  async function sendVisionFrame() {
+    if (busyVision || !camStream) return;
+    if (video.readyState < 2 || !video.videoWidth) return;
+    busyVision = true;
+    setStatus('● a olhar', 'warn');
+    try {
+      const w = Math.min(960, video.videoWidth);
+      const ratio = video.videoHeight / video.videoWidth;
+      const h = Math.round(w * ratio);
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      const prompt = (visionPromptInput.value || '').trim();
+      const r = await fetch('/api/vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl, prompt }),
+      });
+      const data = await r.json();
+      addBot(data.reply || '(sem resposta)', { source: data.source, footer: data.footer, vision: true });
+      speak(data.reply || '');
+      lastVisionAt = Date.now();
+    } catch (e) {
+      addBot('❌ Erro a enviar imagem: ' + e, { source: 'erro', vision: true });
+    } finally {
+      busyVision = false;
+      setStatus('● online');
+    }
+  }
+
+  // ----- microfone via Web Speech API -----
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recog = null;
+  let micWanted = false;
+
+  function buildRecognition() {
+    if (!SR) return null;
+    const r = new SR();
+    r.continuous = true;
+    r.interimResults = true;
+    r.lang = langSel.value || 'pt-PT';
+
+    r.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        const txt = res[0].transcript;
+        if (res.isFinal) {
+          clearInterim();
+          const finalTxt = txt.trim();
+          if (finalTxt) sendChat(finalTxt);
+        } else {
+          interim += txt;
+        }
+      }
+      if (interim) showInterim(interim.trim());
+    };
+    r.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      hint.textContent = 'Microfone: ' + e.error;
+      hint.classList.add('warn');
+    };
+    r.onend = () => {
+      // Reinicia se o utilizador ainda quer ouvir (Chrome corta sozinho ao fim de algum tempo)
+      if (micWanted) {
+        try { r.start(); } catch {}
+      } else {
+        setStatus('● online');
+      }
+    };
+    return r;
+  }
+
+  function startMic() {
+    if (!SR) {
+      hint.textContent = 'Este browser não suporta reconhecimento de voz (usa Chrome ou Edge).';
+      hint.classList.add('warn');
+      micToggle.checked = false;
+      return;
+    }
+    micWanted = true;
+    recog = buildRecognition();
+    try {
+      recog.start();
+      setStatus('● a ouvir', 'warn');
+      hint.textContent = 'A ouvir-te. Fala normalmente — quando parares, eu processo.';
+      hint.classList.remove('warn');
+    } catch (e) {
+      hint.textContent = 'Não consegui ligar o microfone: ' + e;
+      hint.classList.add('warn');
+      micWanted = false;
+      micToggle.checked = false;
+    }
+  }
+
+  function stopMic() {
+    micWanted = false;
+    if (recog) {
+      try { recog.stop(); } catch {}
+      recog = null;
+    }
+    clearInterim();
+    setStatus('● online');
+  }
+
+  // ----- câmara -----
+  async function startCam() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      hint.textContent = 'Este browser não dá acesso à câmara.';
+      hint.classList.add('warn');
+      camToggle.checked = false;
+      return;
+    }
+    try {
+      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      video.srcObject = camStream;
+      videoWrap.classList.remove('off');
+      videoWrap.querySelector('.badge')?.remove();
+      const badge = document.createElement('div');
+      badge.className = 'badge';
+      badge.innerHTML = '<span class="dot"></span> AO VIVO';
+      videoWrap.appendChild(badge);
+      scheduleVision();
+      hint.textContent = 'Câmara ligada. Vou olhar de tempo a tempo (vê a frequência).';
+      hint.classList.remove('warn');
+    } catch (e) {
+      hint.textContent = 'Não consegui aceder à câmara: ' + e.message;
+      hint.classList.add('warn');
+      camToggle.checked = false;
+    }
+  }
+
+  function stopCam() {
+    if (camStream) {
+      camStream.getTracks().forEach(t => t.stop());
+      camStream = null;
+    }
+    video.srcObject = null;
+    videoWrap.classList.add('off');
+    videoWrap.querySelector('.badge')?.remove();
+    if (visionTimer) { clearInterval(visionTimer); visionTimer = null; }
+  }
+
+  function scheduleVision() {
+    if (visionTimer) { clearInterval(visionTimer); visionTimer = null; }
+    const ms = parseInt(intervalSel.value, 10) || 0;
+    if (!ms || !camStream) return;
+    visionTimer = setInterval(() => {
+      // Evita pedir nova análise se a anterior ainda está em andamento
+      if (!busyVision) sendVisionFrame();
+    }, ms);
+  }
+
+  // ----- listeners -----
+  micToggle.addEventListener('change', () => micToggle.checked ? startMic() : stopMic());
+  camToggle.addEventListener('change', () => camToggle.checked ? startCam() : stopCam());
+  langSel.addEventListener('change', () => {
+    if (recog) { stopMic(); micToggle.checked && startMic(); }
+  });
+  intervalSel.addEventListener('change', scheduleVision);
+  visionNow.addEventListener('click', () => {
+    if (!camStream) {
+      hint.textContent = 'Liga primeiro a câmara para a Infinity poder ver.';
+      hint.classList.add('warn');
+      return;
+    }
+    sendVisionFrame();
+  });
+  $('clearBtn').addEventListener('click', () => { chat.innerHTML = ''; });
+  $('composer').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const t = $('input').value.trim();
+    if (!t) return;
+    $('input').value = '';
+    sendChat(t);
+  });
+
+  // Detecta se faltam APIs
+  if (!SR) {
+    micToggle.parentElement.classList.add('disabled');
+    micToggle.disabled = true;
+    micToggle.parentElement.title = 'Reconhecimento de voz não suportado neste browser.';
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    camToggle.parentElement.classList.add('disabled');
+    camToggle.disabled = true;
+    camToggle.parentElement.title = 'getUserMedia não suportado neste browser.';
+  }
+
+  // Mensagem inicial
+  addBot('Olá! Liga o 🎤 microfone para eu te ouvir, ou o 👁️ para eu te ver. Também podes escrever em baixo.', { source: 'live' });
+})();
+</script>
+
+</body>
+</html>
