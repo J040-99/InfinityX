@@ -1,0 +1,62 @@
+(omni310) PS C:\Users\João\Documents\InfinityX\InfinityX> py infinityx.py
+════════════════════════════════════════════════════════════════════════════════════════════════════
+                                        I N F I N I T Y · X
+                            assistente local autónoma · IA + ferramentas
+════════════════════════════════════════════════════════════════════════════════════════════════════
+Olá. Fala comigo em português. Escreve ajuda para ver o que faço, ou sair para terminar.
+
+tu [22:29:35]
+  › oi
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:29:42]
+  Olá! Como posso ajudar?
+  local · 4.14s
+
+tu [22:29:42]
+  › 1+1
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:29:50]
+  2
+  local · 0ms
+
+tu [22:29:50]
+  › um menos 3
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:30:01]
+  -2
+  local · 0ms
+
+tu [22:30:01]
+  › temperatura atual
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:30:25]
+  🌤️ Atual - Torres Vedras
+  Temperatura: 13.3°C
+  Sensação: 13.4°C
+  Estado: Parcialmente nublado
+  Humidade: 84%
+  Vento: 2 km/h
+
+  Fonte: Open-Meteo
+  local · 1.43s
+
+tu [22:30:25]
+  › quem és tu?
+[DEBUG] Browser search query: Olá
+   [DEBUG] 5 página(s) lida(s), 3 usadas no LLM
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:30:49]
+  Olá! Como posso ajudar você hoje? 😄
+  lm_studio · local · 2491 tok (2477↑ 14↓) · 6.93s
+
+tu [22:30:49]
+  › quais são os carros mais rápidos do mundo?
+[DEBUG] Browser search query: quais são os carros mais rápidos do mundo?
+   [DEBUG] 5 página(s) lida(s), 3 usadas no LLM
+────────────────────────────────────────────────────────────────────────────────────────────────────
+infinity [22:31:22]
+  Os carros mais rápidos do mundo são os Bugatti Chiron e o Cupê.
+  lm_studio · local · 3148 tok (3127↑ 21↓) · 6.04s
+
+tu [22:31:22]
+  ›

@@ -7,5 +7,57 @@
     }
   ],
   "variaveis": {},
-  "ultima_pasta": null
+  "ultima_pasta": null,
+  "ultima_pesquisa": "não é o Koenigsegg Jesko Absolut?",
+  "ultima_resposta": null,
+  "clima_historico": [
+    {
+      "data": "2026-04-29 00:41",
+      "cidade": "Torres Vedras",
+      "temp": 13.8,
+      "hum": 95,
+      "wind": 2.9,
+      "estado": "Nublado"
+    },
+    {
+      "data": "2026-04-29 00:53",
+      "cidade": "Torres Vedras",
+      "temp": 13.7,
+      "hum": 95,
+      "wind": 3.2,
+      "estado": "Nublado"
+    },
+    {
+      "data": "2026-04-29 00:54",
+      "cidade": "Torres Vedras",
+      "temp": 13.7,
+      "hum": 95,
+      "wind": 3.2,
+      "estado": "Nublado"
+    },
+    {
+      "data": "2026-04-29 22:58",
+      "cidade": "Torres Vedras",
+      "temp": 13.0,
+      "hum": 93,
+      "wind": 4.8,
+      "estado": "Parcialmente nublado"
+    },
+    {
+      "data": "2026-04-29 23:40",
+      "cidade": "Torres Vedras",
+      "temp": 13.2,
+      "hum": 93,
+      "wind": 4.3,
+      "estado": "Parcialmente nublado"
+    },
+    {
+      "data": "2026-04-29 23:45",
+      "cidade": "Torres Vedras",
+      "temp": 13.1,
+      "hum": 93,
+      "wind": 4.3,
+      "estado": "Parcialmente nublado"
+    }
+  ]
 }
