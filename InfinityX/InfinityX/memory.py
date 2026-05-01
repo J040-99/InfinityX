@@ -5,7 +5,7 @@ import os
 
 from config import LEMBRETES_FILE, MEMORIA_FILE, NOTAS_FILE, PALAVRAS_FILE
 
-MEMORIA: dict = {"historico": [], "variaveis": {}, "ultima_pasta": None, "ultima_pesquisa": None, "ultima_resposta": None}
+MEMORIA: dict = {"historico": [], "variaveis": {}, "ultima_pasta": None, "ultima_pesquisa": None, "ultima_resposta": None, "contexto_visao": []}
 PALAVRAS: dict = {}
 NOTAS: list = []
 LEMBRETES: list = []

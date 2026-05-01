@@ -10,6 +10,68 @@
   "ultima_pasta": null,
   "ultima_pesquisa": "não é o Koenigsegg Jesko Absolut?",
   "ultima_resposta": null,
+  "contexto_visao": [
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma transmissão ao vivo no YouTube, com um mapa de estratégia visível e um homem ",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube, com várias opções de vídeos. Alguns títulos de vídeos estã",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube com um vídeo em destaque que tem um X vermelho sobreposto c",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma janela de um editor de código, com várias opções de menu e uma lista de fiche",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube com um vídeo de anime. O vídeo mostra dois personagens, um ",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma captura de ecrã com duas janelas abertas lado a lado. À esquerda, vemos o You",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube com um vídeo em reprodução. A personagem de um jogo eletrôn",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube com um vídeo de um jogo. O vídeo tem o título \"NTE\" e uma i",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube, com um vídeo em reprodução e uma janela de comentários abe",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra um ecrã do Youtube, com um vídeo a ser reproduzido. O vídeo mostra um homem a mex",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma página do YouTube, com um vídeo de um carro vermelho NSX. O vídeo tem o títul",
+      "src": "vision"
+    },
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra uma captura de tela de um video do YouTube, com uma mão a segurar um cartão com o",
+      "src": "vision"
+    }
+  ],
   "clima_historico": [
     {
       "data": "2026-04-29 00:41",

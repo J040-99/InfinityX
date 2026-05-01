@@ -328,6 +328,46 @@ def _analisar_core(entrada: str) -> dict:
     if m_img:
         return {"action": "descrever_imagem", "path": m_img.group(1).strip().strip('"\'') }
 
+    # Comandos para abrir apps/sites antes do LLM
+    abrir_patterns = [
+        (r'\babre\s+o?\s*(?:navegador|browser|chrome|firefox|edge|safari)\b', "navegador"),
+        (r'\babre\s+o?\s*(?:spotify|netflix|youtube|spotfy|netfliz)\b', None),  # Extract app name
+        (r'\babre\s+(?:o\s+)?(.+)', None),  # Generic "abre X"
+    ]
+    for pattern, fixed_app in abrir_patterns:
+        m = re.search(pattern, e)
+        if m:
+            app = fixed_app
+            if app is None and m.lastindex:
+                app = m.group(m.lastindex).strip()
+            if app:
+                # Normalize common app names
+                app_lower = app.lower()
+                if any(b in app_lower for b in ["navegador", "browser", "chrome", "firefox", "edge", "safari"]):
+                    app = "navegador"
+                elif any(s in app_lower for s in ["spotify", "spotfy"]):
+                    app = "spotify"
+                elif any(n in app_lower for n in ["netflix", "netfliz"]):
+                    app = "netflix"
+                elif any(y in app_lower for y in ["youtube", "youtub"]):
+                    app = "youtube"
+                return {"action": "abrir", "app": app, "source": "pattern"}
+
+    # Perguntas factuais sobre pessoas/lugares/coisas - antes do LLM
+    factual_patterns = [
+        r'\bquem\s+(?:é|era|foi)\s+(?:o\s+|a\s+)?(\w+)',
+        r'\bqu[eé]\s+(?:é|são|era)\s+(\w+)',
+        r'\bdefine\s+(?:o\s+|a\s+)?(\w+)',
+        r'\bo\s+que\s+é\s+(\w+)',
+    ]
+    for pattern in factual_patterns:
+        m = re.search(pattern, e)
+        if m:
+            termo = m.group(1).strip()
+            # Skip if it's already handled by other patterns (like "o que é [palavra]" in checar_palavra)
+            if termo and len(termo) > 2 and not any(p in e for p in ["palavra", "significado"]):
+                return {"action": "buscar", "query": f"o que é {termo}", "source": "factual"}
+
     if pre := pre_analyze(entrada):
         if pre.startswith("__criar_arquivo:"):
             nome = pre.replace("__criar_arquivo:", "").replace("__", "").strip()
@@ -340,10 +380,10 @@ def _analisar_core(entrada: str) -> dict:
         # Deixa a IA decidir a resposta baseado no contexto, não respostas determinísticas
         return {"action": "responder", "texto": ""}
     
-    # Follow-up: perguntas curtas que referem-se à última pesquisa (VERIFICA ANTES das confirmações genéricas)
+# Follow-up: perguntas curtas que referem-se à última pesquisa ou ação (VERIFICA ANTES das confirmações genéricas)
     # EXCETO se for sobre música (para não quebrar o comando "toca musica")
     followup_patterns = [
-        r'^certeza\??$', r'^mesmo\??$', r'^mesma\??$', r'^certeza\b',
+        r'^certeza\??$', r'^mesmo\??$', r'^mesma\??$',
         r'^ok\??$', r'^sim\??$', r'^nao\??$', r'^não\??$',
         r'^e ?', r'^e o ', r'^e a ',
         r'^mais\b', r'^mais info\b', r'^mais detalhes\b',
@@ -355,6 +395,24 @@ def _analisar_core(entrada: str) -> dict:
         r'^não é\b', r'^nao é\b', r'^não é o\b', r'^nao é o\b',
         r'^não é a\b', r'^nao é a\b',
         r'^não\s+é', r'^nao\s+é',
+        # Feedback sobre ações recentes
+        r'^só\s+', r'^apenas\s+', r'^não\s+', r'^nao\s+',
+        r'^abriu\s+(?:uma\s+)?aba', r'^abriu\s+(?:uma\s+)?janela',
+        r'^abriu\s+o\s+navegador',
+    ]
+
+    # Padrões de correção/feedback sobre ações - tratadas antes de follow-up geral
+    correction_patterns = [
+        r'^eu\s+dis',
+        r'^não\s+era\s+', r'^nao\s+era\s+',
+        r'^não\s+é\s+isso', r'^nao\s+é\s+isso',
+        r'^não\s+o\s+', r'^nao\s+o\s+',
+        r'^quis\s+dizer', r'^queria\s+dizer',
+        r'^queria\s+abrir',
+        r'^não\s+abriu', r'^nao\s+abriu',
+        r'^não\s+era\s+(?:para\s+)?abrir', r'^nao\s+era\s+(?:para\s+)?abrir',
+        r'^eu\s+queria',
+        r'^eu\s+quis',
     ]
     # Padrões de follow-up mais complexos que devem construir sobre a última resposta
     followup_complex_patterns = [
@@ -382,6 +440,29 @@ def _analisar_core(entrada: str) -> dict:
     has_previous_context = MEMORIA.get("ultima_pesquisa") or (historico and len(historico) >= 1 and (len(ultima_perg) > 3 or len(ultima_resp) > 1))
     
     if has_previous_context:
+        # Verificar primeiro se é uma correção/feedback sobre ação anterior
+        is_correction = any(re.search(p, e) for p in correction_patterns)
+        if is_correction:
+            # Verificar última ação para determinar como corrigir
+            historico = MEMORIA.get("historico", [])
+            if historico:
+                ultima_ent = historico[-1].get("ent", "").lower()
+                ultima_res = historico[-1].get("res", "")
+                
+                # Correção sobre abertura de navegador
+                if any(p in ultima_ent for p in ["abre", "browser", "navegador"]) and any(p in e for p in ["janela", "nova", " nova", "não", "nao", "era", "quis", "queria", "diz", "dizer"]):
+                    # Tentar abrir em nova janela (comando específico do SO)
+                    import subprocess
+                    import sys
+                    try:
+                        if sys.platform == "win32":
+                            subprocess.Popen(["cmd", "/c", "start", "chrome", "--new-window", "https://www.google.com"])
+                        else:
+                            subprocess.Popen(["open", "-n", "https://www.google.com"])
+                        return {"action": "responder", "texto": "🔧 Ops,sorry! Abri numa nova janela agora. Corrigido!", "source": "correction"}
+                    except Exception:
+                        return {"action": "responder", "texto": "🔧 Desculpa, não consegui abrir em nova janela. Queres que tente de outra forma?", "source": "correction_fail"}
+        
         # Verificar se é um follow-up complexo (deve usar histórico)
         is_complex_followup = any(re.match(p, e) for p in followup_complex_patterns)
         
@@ -398,8 +479,13 @@ def _analisar_core(entrada: str) -> dict:
                 followup_query = f"{ultima}. Follow-up: {entrada.strip()}"
                 return {"action": "browser_search", "query": followup_query, "source": "followup"}
             else:
+                historico = MEMORIA.get("historico", [])
+                if historico and len(historico) >= 1:
+                    ultima_resp = historico[-1].get("res", "")
+                    if ultima_resp and len(ultima_resp) > 2:
+                        return {"action": "responder", "texto": "Podes explicar melhor o que queres?", "source": "followup_context"}
                 return {"action": "browser_search", "query": entrada.strip(), "source": "followup_verify"}
-        
+
         # Perguntas muito curtas que devem ser sempre follow-up
         if e.strip() in very_short_followups and has_previous_context:
             ultima = MEMORIA.get("ultima_pesquisa")
@@ -407,7 +493,12 @@ def _analisar_core(entrada: str) -> dict:
                 followup_query = f"{ultima}. Follow-up: {entrada.strip()}"
                 return {"action": "browser_search", "query": followup_query, "source": "followup_short"}
             else:
-                return {"action": "browser_search", "query": entrada.strip(), "source": "followup_verify"}
+                historico = MEMORIA.get("historico", [])
+                if historico and len(historico) >= 1:
+                    ultima_resp = historico[-1].get("res", "")
+                    if ultima_resp and len(ultima_resp) > 2:
+                        return {"action": "responder", "texto": "Exato. Em que posso ajudar?", "source": "followup_context"}
+                return {"action": "responder", "texto": "O que precisas?", "source": "followup_clarify"}
 
     # Clima - só se contiver palavras específicas de clima
     if re.search(r'\b(clima|tempo|temperatura|graus|chove|chuva|sol|nublado|frio|calor|previsao|previsão)\b', e):
@@ -633,9 +724,9 @@ def _build_action_table(dec: dict) -> dict:
         if texto:
             return texto
         # Se texto vazio, chama LLM para gerar resposta
-        from llm import self_discuss
         try:
-            return self_discuss(entrada or "Olá")
+            result = self_discuss(entrada or "Olá")
+            return result if result and result.strip() else "Olá! Como posso ajudar?"
         except Exception:
             return "Olá! Como posso ajudar?"
     

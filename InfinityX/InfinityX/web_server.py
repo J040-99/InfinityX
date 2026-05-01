@@ -147,13 +147,25 @@ def vision():
     else:
         stats.LAST["elapsed_ms"] = round(elapsed, 1)
 
-    # Regista sempre no histórico para a Infinity ter contexto visual
-    _registar_no_historico("[câmara ao vivo]", resposta, {"source": "vision", "action": "ver"})
+    # Armazena no contexto de visão privado (não visível no chat) para a Infinity ter contexto visual
+    MEMORIA["contexto_visao"].append({
+        "ent": "[câmara ao vivo]",
+        "res": (resposta or "")[:100],
+        "src": "vision"
+    })
+    if len(MEMORIA["contexto_visao"]) > MAX_HISTORY:
+        MEMORIA["contexto_visao"] = MEMORIA["contexto_visao"][-MAX_HISTORY:]
+    try:
+        salvar_memoria()
+    except Exception:  # noqa: BLE001
+        pass
 
+    # Para requisições de visão, não retornamos a descrição como mensagem visível
+    # A descrição é armazenada em MEMORIA["contexto_visao"] para uso posterior pela IA
     return jsonify({
-        "reply": resposta or "",
+        "reply": "",  # Mensagem vazia - não mostra descrição de visão ao usuário
         "source": "vision",
-        "footer": stats.format_footer() or "",
+        "footer": "",
     })
 
 

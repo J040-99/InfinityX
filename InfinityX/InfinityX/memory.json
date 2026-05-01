@@ -1160,8 +1160,15 @@
   ],
   "variaveis": {},
   "ultima_pasta": "C:\\Users\\João\\music",
-  "ultima_pesquisa": "quais são os carros mais rápidos do mundo?",
+  "ultima_pesquisa": "tu abriste um separador e não uma nova janela",
   "ultima_resposta": null,
+  "contexto_visao": [
+    {
+      "ent": "[câmara ao vivo]",
+      "res": "👁️ A imagem mostra um ecrã de computador com várias janelas abertas. Existe uma janela com uma inter",
+      "src": "vision"
+    }
+  ],
   "clima_historico": [
     {
       "data": "2026-04-29 00:30",

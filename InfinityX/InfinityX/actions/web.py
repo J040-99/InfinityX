@@ -23,7 +23,7 @@ def action_abrir(app: str) -> str:
         if app_base in navegador_aliases or app_lower in navegador_aliases:
             try:
                 webbrowser.open_new_tab("https://www.google.com")
-                return "🌐 Abrindo o navegador"
+                return "🌐 Já abri o navegador para ti"
             except webbrowser.Error:
                 pass
 

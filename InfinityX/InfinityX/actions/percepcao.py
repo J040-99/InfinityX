@@ -74,8 +74,8 @@ def action_ouvir_e_responder(duracao: int = 6, idioma: str = "pt-PT") -> str:
 
 # ----------------------------------------------------------------- ver
 _PROMPT_VER_DEFAULT = (
-    "Descreve em português europeu, em 2 a 3 frases curtas, o que vês "
-    "na imagem. Se houver texto legível, transcreve-o."
+    "Descreve brevemente o que vês na imagem em português europeu. "
+    "Se houver texto legível, transcreve-o de forma concisa."
 )
 _VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 

@@ -508,31 +508,31 @@
   }
 
   // ----- câmara -----
-  async function startCam() {
+async function startCam() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      hint.textContent = 'Este browser não dá acesso à câmara.';
-      hint.classList.add('warn');
-      camToggle.checked = false;
-      return;
+        hint.textContent = 'Este browser não dá acesso à câmara.';
+        hint.classList.add('warn');
+        camToggle.checked = false;
+        return;
     }
     try {
-      camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-      video.srcObject = camStream;
-      videoWrap.classList.remove('off');
-      videoWrap.querySelector('.badge')?.remove();
-      const badge = document.createElement('div');
-      badge.className = 'badge';
-      badge.innerHTML = '<span class="dot"></span> AO VIVO';
-      videoWrap.appendChild(badge);
-      scheduleVision();
-      hint.textContent = 'Câmara ligada. Vou olhar de tempo a tempo (vê a frequência).';
-      hint.classList.remove('warn');
+        camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+        video.srcObject = camStream;
+        videoWrap.classList.remove('off');
+        videoWrap.querySelector('.badge')?.remove();
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.innerHTML = '<span class="dot"></span> AO VIVO';
+        videoWrap.appendChild(badge);
+        // scheduleVision();  // Desativado: visão só deve ser usado quando o cliente manda uma mensagem
+        hint.textContent = 'Câmara ligada. Use o botão "Ver agora" ou peça para eu descrever o que vejo.';
+        hint.classList.remove('warn');
     } catch (e) {
-      hint.textContent = 'Não consegui aceder à câmara: ' + e.message;
-      hint.classList.add('warn');
-      camToggle.checked = false;
+        hint.textContent = 'Não consegui aceder à câmara: ' + e.message;
+        hint.classList.add('warn');
+        camToggle.checked = false;
     }
-  }
+}
 
   function stopCam() {
     if (camStream) {
@@ -545,39 +545,35 @@
     if (visionTimer) { clearInterval(visionTimer); visionTimer = null; }
   }
 
-  function scheduleVision() {
+function scheduleVision() {
+    // Desativado: visão só deve ser usado quando o cliente manda uma mensagem
     if (visionTimer) { clearInterval(visionTimer); visionTimer = null; }
-    const ms = parseInt(intervalSel.value, 10) || 0;
-    if (!ms || !camStream) return;
-    visionTimer = setInterval(() => {
-      // Evita pedir nova análise se a anterior ainda está em andamento
-      if (!busyVision) sendVisionFrame();
-    }, ms);
-  }
+    // Não configurar mais visão automática
+}
 
-  // ----- listeners -----
-  micToggle.addEventListener('change', () => micToggle.checked ? startMic() : stopMic());
-  camToggle.addEventListener('change', () => camToggle.checked ? startCam() : stopCam());
-  langSel.addEventListener('change', () => {
-    if (recog) { stopMic(); micToggle.checked && startMic(); }
-  });
-  intervalSel.addEventListener('change', scheduleVision);
-  visionNow.addEventListener('click', () => {
-    if (!camStream) {
-      hint.textContent = 'Liga primeiro a câmara para a Infinity poder ver.';
-      hint.classList.add('warn');
-      return;
-    }
-    sendVisionFrame();
-  });
-  $('clearBtn').addEventListener('click', () => { chat.innerHTML = ''; });
-  $('composer').addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    const t = $('input').value.trim();
-    if (!t) return;
-    $('input').value = '';
-    sendChat(t);
-  });
+   // ----- listeners -----
+   micToggle.addEventListener('change', () => micToggle.checked ? startMic() : stopMic());
+   camToggle.addEventListener('change', () => camToggle.checked ? startCam() : stopCam());
+   langSel.addEventListener('change', () => {
+     if (recog) { stopMic(); micToggle.checked && startMic(); }
+   });
+   // intervalSel.addEventListener('change', scheduleVision);  // Desativado: visão só deve ser usado quando o cliente manda uma mensagem
+   visionNow.addEventListener('click', () => {
+     if (!camStream) {
+       hint.textContent = 'Liga primeiro a câmara para a Infinity poder ver.';
+       hint.classList.add('warn');
+       return;
+     }
+     sendVisionFrame();
+   });
+   $('clearBtn').addEventListener('click', () => { chat.innerHTML = ''; });
+   $('composer').addEventListener('submit', (ev) => {
+     ev.preventDefault();
+     const t = $('input').value.trim();
+     if (!t) return;
+     $('input').value = '';
+     sendChat(t);
+   });
 
   // Detecta se faltam APIs
   if (!SR) {

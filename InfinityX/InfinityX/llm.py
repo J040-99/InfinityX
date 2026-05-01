@@ -38,6 +38,7 @@ def _build_messages_with_history(prompt: str) -> tuple[list, int]:
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     total_chars = len(SYSTEM_PROMPT)
     
+    # Adiciona histórico regular (visível no chat)
     if MEMORIA.get("historico"):
         # Constrói histórico com limite de tokens
         historico = []
@@ -55,6 +56,25 @@ def _build_messages_with_history(prompt: str) -> tuple[list, int]:
             messages.append({"role": "user", "content": h["ent"]})
             messages.append({"role": "assistant", "content": h["res"]})
             total_chars += len(h["ent"]) + len(h["res"])
+    
+    # Adiciona contexto de visão (não visível no chat, mas disponível para a IA)
+    if MEMORIA.get("contexto_visao"):
+        # Constrói contexto de visão com limite de tokens
+        visao_contexto = []
+        for v in reversed(MEMORIA["contexto_visao"]):
+            ent = v.get("ent", "")
+            res = v.get("res", "")
+            #估算 tokens (aprox 1 token = 4 chars)
+            tokens_est = len(ent) + len(res)
+            visao_contexto.append((tokens_est, {"ent": ent, "res": res}))
+            if sum(t for t, _ in visao_contexto) > (MAX_TOKENS - len(prompt) - 500 - sum(t for t, _ in historico if 'historico' in locals())):
+                break
+        
+        # Adiciona do mais antigo para mais recente
+        for _, v in reversed(visao_contexto):
+            messages.append({"role": "user", "content": v["ent"]})
+            messages.append({"role": "assistant", "content": v["res"]})
+            total_chars += len(v["ent"]) + len(v["res"])
     
     total_chars += len(prompt)
     messages.append({"role": "user", "content": prompt})
