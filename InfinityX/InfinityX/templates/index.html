@@ -218,6 +218,7 @@
     <div id="status" class="status">● online</div>
   </div>
   <div class="spacer"></div>
+  <button id="copyBtn" class="btn secondary">📋 Copiar conversa</button>
   <button id="clearBtn" class="btn secondary">Limpar conversa</button>
 </header>
 
@@ -369,13 +370,41 @@
   }
 
   // ----- TTS -----
+  let _voiceList = [];
+  if ('speechSynthesis' in window) {
+    const loadVoices = () => { _voiceList = window.speechSynthesis.getVoices(); };
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    loadVoices();
+  }
+
+  function pickVoice(lang) {
+    if (!_voiceList.length) _voiceList = window.speechSynthesis.getVoices();
+    const base = lang.split('-')[0].toLowerCase();
+    // 1. Preferir voz local (não Google) no idioma exacto
+    const local = _voiceList.filter(v =>
+      v.localService && v.lang.toLowerCase().startsWith(base)
+    );
+    if (local.length) return local[0];
+    // 2. Qualquer voz no idioma que não seja Google
+    const nonGoogle = _voiceList.filter(v =>
+      v.lang.toLowerCase().startsWith(base) && !/google/i.test(v.name)
+    );
+    if (nonGoogle.length) return nonGoogle[0];
+    // 3. Qualquer voz no idioma (fallback)
+    const anyLang = _voiceList.filter(v => v.lang.toLowerCase().startsWith(base));
+    if (anyLang.length) return anyLang[0];
+    return null;
+  }
+
   function speak(text) {
     if (!ttsToggle.checked) return;
     if (!('speechSynthesis' in window)) return;
     try {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = (langSel.value || 'pt-PT');
-      u.rate = 1.0; u.pitch = 1.0;
+      const voice = pickVoice(u.lang);
+      if (voice) u.voice = voice;
+      u.rate = 1.05; u.pitch = 1.0;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch {}
@@ -567,6 +596,34 @@ function scheduleVision() {
      sendVisionFrame();
    });
    $('clearBtn').addEventListener('click', () => { chat.innerHTML = ''; });
+   $('copyBtn').addEventListener('click', () => {
+     const lines = [];
+     const ts = new Date().toISOString();
+     lines.push(`=== Infinity — Conversa exportada em ${ts} ===\n`);
+     chat.querySelectorAll('.msg').forEach(msg => {
+       if (msg.classList.contains('interim')) return;
+       const isUser = msg.classList.contains('user');
+       const who = msg.querySelector('.who')?.textContent?.trim() || (isUser ? 'Tu' : 'Infinity');
+       const body = msg.querySelector('.body')?.textContent?.trim() || msg.childNodes[msg.childNodes.length - 1]?.textContent?.trim() || '';
+       const footer = msg.querySelector('.footer')?.textContent?.trim() || '';
+       const tag = msg.querySelector('.tag')?.textContent?.trim() || '';
+       if (isUser) {
+         lines.push(`[Tu]\n${body}\n`);
+       } else {
+         const debug = [tag && `source=${tag}`, footer].filter(Boolean).join(' | ');
+         lines.push(`[Infinity${debug ? ' | ' + debug : ''}]\n${body}\n`);
+       }
+     });
+     const text = lines.join('\n');
+     navigator.clipboard.writeText(text).then(() => {
+       const btn = $('copyBtn');
+       const orig = btn.textContent;
+       btn.textContent = '✅ Copiado!';
+       setTimeout(() => { btn.textContent = orig; }, 1800);
+     }).catch(() => {
+       alert('Não foi possível copiar. Tenta manualmente.');
+     });
+   });
    $('composer').addEventListener('submit', (ev) => {
      ev.preventDefault();
      const t = $('input').value.trim();
