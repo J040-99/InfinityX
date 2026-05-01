@@ -158,6 +158,13 @@ def main() -> None:
             if len(MEMORIA["historico"]) > MAX_HISTORY:
                 MEMORIA["historico"] = MEMORIA["historico"][-MAX_HISTORY:]
             salvar_memoria()
+            
+            # Indexar na memória de longo prazo (RAG)
+            try:
+                from rag import indexar_conteudo
+                indexar_conteudo(f"Utilizador: {entrada}\nInfinity: {resposta}", {"timestamp": datetime.now().isoformat()})
+            except Exception:
+                pass
 
             _imprimir_resposta(resposta, dec)
 

@@ -23,6 +23,7 @@ from .midia import (
 )
 from .percepcao import (
     action_descrever_imagem,
+    action_ocr,
     action_ouvir,
     action_ouvir_e_responder,
     action_ver,
@@ -80,6 +81,12 @@ from .sistema import (
     action_network_info,
     action_sysinfo,
     get_localizacao_atual,
+    action_click,
+    action_type_text,
+    action_press_key,
+    action_move_mouse,
+    action_screenshot,
+    action_window_control,
 )
 from .util import (
     action_base64,
@@ -108,4 +115,13 @@ from .web import (
     action_noticias,
     action_public_ip,
     action_wikipedia,
+)
+from .automacao import (
+    action_executar_codigo,
+    action_browser_automation,
+    action_indexar_ficheiro,
+)
+
+from .monitorizacao import (
+    action_monitorar_condicao,
 )

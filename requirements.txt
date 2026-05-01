@@ -1,0 +1,28 @@
+# Dependências Principais
+requests
+beautifulsoup4
+selenium
+pyautogui
+psutil
+pyperclip
+python-dotenv
+
+# IA e Processamento de Linguagem
+# (Opcional: LM Studio deve estar a correr separadamente)
+
+# Audição (Gratuito e Local)
+SpeechRecognition
+faster-whisper
+pyaudio
+
+# Visão e OCR (Gratuito e Local)
+Pillow
+pytesseract
+
+# Outros
+ytmusicapi
+pylast
+schedule
+flask
+uvicorn
+fastapi

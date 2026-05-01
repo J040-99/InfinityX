@@ -65,16 +65,6 @@ def action_browser_search(query: str, engine: str = "google") -> str:
     from memory import MEMORIA
     print(f"[DEBUG] Browser search query: {query}")
     
-    # Se a query já veio do parser com contexto de follow-up (contém "Pergunta do usuário agora:"),
-    # vamos adicionar contexto adicional da memória
-    needs_extra_context = False
-    if "Pergunta do usuário agora:" not in query and MEMORIA.get("historico") and len(MEMORIA["historico"]) >= 2:
-        prev_resp = MEMORIA["historico"][-1].get("res", "")
-        if len(prev_resp) > 50:
-            needs_extra_context = True
-            context_hint = f"\n[Contexto da resposta anterior: {prev_resp[:300]}...]"
-    
-    # Não guardar pesquisas genéricas de follow-up como "Olá"
     if query.strip().lower() not in ["olá", "oi", "ola"]:
         MEMORIA["ultima_pesquisa"] = query
     
@@ -88,322 +78,110 @@ def action_browser_search(query: str, engine: str = "google") -> str:
             html_pesquisa = resp.read().decode("utf-8", errors="ignore")
         
         import re
-        # Extrair URLs dos resultados - múltiplos padrões para maior robustez
         urls = []
-        
-        # Padrão 1: links normais nos resultados
         link_pattern = r'<a[^>]*href="(https?://[^"]+)"[^>]*>'
         for match in re.finditer(link_pattern, html_pesquisa):
             url = match.group(1)
-            # Filtrar URLs válidas (excluir duckduckgo, loops, etc.)
-            if ('duckduckgo' not in url and 
-                'http' in url and 
-                len(url) > 10 and 
-                url not in urls and 
-                len(urls) < 5):
+            if ('duckduckgo' not in url and 'http' in url and len(url) > 10 and url not in urls and len(urls) < 5):
                 urls.append(url)
         
-        # Se ainda não temos URLs, tentar buscar por domínios comuns
-        if len(urls) < 3:
-            domain_pattern = r'(https?://(?:www\.)?[a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:/[^\s"\'<>]*)?)'
-            for match in re.finditer(domain_pattern, html_pesquisa):
-                url = match.group(1).rstrip('">')
-                if ('duckduckgo' not in url and 
-                    url not in urls and 
-                    len(urls) < 5):
-                    urls.append(url)
-        
-        # Fallback final: construir URLs de busca do Google se nada funcionar
         if not urls:
-            # Extrair termos da query e criar URLs prováveis
             termos = query.lower().split()[:5]
-            fallback_urls = [
-                f"https://pt.wikipedia.org/wiki/{'_'.join(termos)}",
-                f"https://www.google.com/search?q={urllib.parse.quote(query)}"
-            ]
-            urls = fallback_urls[:3]
+            urls = [f"https://pt.wikipedia.org/wiki/{'_'.join(termos)}", f"https://www.google.com/search?q={urllib.parse.quote(query)}"][:3]
         
         if not urls:
             return f"❌ Não consegui obter resultados para '{query}'"
         
-        # 2. Fazer scraping do conteúdo de cada URL com timeout maior e tratamento robusto
-        # Aumentar o número de páginas para mais contexto e precisão
+        # 2. Scraping
         conteudos = []
-        for url in urls[:5]:  # Ler até 5 páginas para mais fontes
+        for url in urls[:3]:
             try:
-                req_url = urllib.request.Request(url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
-                    "Connection": "keep-alive"
-                })
-                with urllib.request.urlopen(req_url, timeout=15) as resp_url:
+                req_url = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req_url, timeout=10) as resp_url:
                     html_content = resp_url.read().decode("utf-8", errors="ignore")
                 
-                # Extrair texto principal usando BeautifulSoup
-                try:
-                    from bs4 import BeautifulSoup
-                    soup = BeautifulSoup(html_content, 'html.parser')
-                    
-                    # Remover scripts, styles, nav, footer, header, aside
-                    for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'advertisement']):
-                        tag.decompose()
-                    
-                    # Tentar encontrar conteúdo principal
-                    main_content = None
-                    for tag_id in ['main', 'content', 'article', 'post', 'entry']:
-                        main_tag = soup.find(id=tag_id) or soup.find(class_=tag_id)
-                        if main_tag:
-                            main_content = main_tag
-                            break
-                    
-                    if not main_content:
-                        # Fallback: pegar todos os parágrafos
-                        paragraphs = soup.find_all('p')
-                        text = '\n'.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 50])
-                    else:
-                        text = main_content.get_text(separator='\n', strip=True)
-                    
-                    # Limitar tamanho do texto (máx 4000 caracteres por página para mais contexto)
-                    if len(text) > 4000:
-                        text = text[:4000] + "..."
-                    
-                    if text.strip() and len(text) > 100:  # Só adicionar se tiver conteúdo relevante
-                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
-                except ImportError:
-                    # BeautifulSoup não disponível, usar método básico
-                    text = re.sub(r'<[^>]+>', '\n', html_content)
-                    text = re.sub(r'\n\s*\n', '\n\n', text)
-                    paragraphs = [p.strip() for p in text.split('\n') if len(p) > 100]
-                    text = '\n'.join(paragraphs[:30])
-                    if text.strip():
-                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
-                except Exception as e_bs:
-                    # Fallback sem BeautifulSoup: extrair texto básico
-                    text = re.sub(r'<[^>]+>', '\n', html_content)
-                    text = re.sub(r'\n\s*\n', '\n\n', text)
-                    paragraphs = [p.strip() for p in text.split('\n') if len(p) > 100]
-                    text = '\n'.join(paragraphs[:20])
-                    if text.strip():
-                        conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
-                        
-            except Exception as e_url:
-                # Log silencioso e continuar para próxima URL
-                continue  # Pular URL com erro e continuar
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(html_content, 'html.parser')
+                for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+                    tag.decompose()
+                text = soup.get_text(separator='\n', strip=True)
+                if len(text) > 3000:
+                    text = text[:3000] + "..."
+                if text.strip() and len(text) > 100:
+                    conteudos.append(f"Fonte: {url}\nConteúdo:\n{text}")
+            except Exception:
+                continue
         
         if not conteudos:
             return f"❌ Não consegui ler o conteúdo das páginas para '{query}'"
         
-        # 3. Construir contexto completo para o LLM (limitado para evitar erro 413)
-        # Limitar a 3 páginas mais relevantes e 2500 caracteres cada para mais precisão
-        conteudos_limitados = conteudos[:3]
-        contexto_completo = "\n\n---\n\n".join([
-            c[:2500] + "..." if len(c) > 2500 else c 
-            for c in conteudos_limitados
-        ])
-        
-        # Debug: mostrar quantas páginas foram lidas
-        print(f"   [DEBUG] {len(conteudos)} página(s) lida(s), {len(conteudos_limitados)} usadas no LLM")
-        
-        # 4. Síntese: LM Studio (Qwen) como prioridade, Groq fallback
+        # 3. Síntese via LM Studio
         try:
-            from llm import chamar_lm_studio, chamar_groq
+            from llm import chamar_lm_studio
             
-            # Obter histórico recente para contexto de consistência
-            historico_texto = ""
-            if MEMORIA.get("historico"):
-                ultimas = MEMORIA["historico"][-5:]
-                for h in ultimas:
-                    ent = h.get("ent", "")
-                    res = h.get("res", "")
-                    if ent and res and len(res) > 10:
-                        historico_texto += f"Pergunta: '{ent}' → Resposta: '{res[:300]}...'\n"
-            
-            # Detectar tipo de pergunta
-            query_lower = query.lower()
-            is_followup = "follow-up:" in query_lower or any(p in query_lower for p in ["não é", "nao é", "entao", "mas", "por isso", "pq", "qual é", "qual a", "porqué", "porque", "certeza"])
-            
-            contexto_extra = f"[CONTEXTO DA CONVERSA]\n{historico_texto}\n" if historico_texto else ""
+            contexto_completo = "\n\n---\n\n".join(conteudos)
             prompt = f"""O usuário perguntou: "{query}"
-{contexto_extra}
 
-FONTES ENCONTRADAS ({len(conteudos_limitados)}):
+FONTES ENCONTRADAS:
 {contexto_completo}
 
 TAREFA: Responde à pergunta do usuário usando APENAS as informações das fontes fornecidas acima.
 Responda em português, 2-4 frases curtas."""
 
-            # Calcular tamanho do prompt (aprox 1 token = 4 chars)
-            # Usar Groq apenas se o contexto > 4096 tokens (~16384 chars)
-            prompt_size = len(prompt)
-            use_groq = prompt_size > 16000
+            return chamar_lm_studio(prompt)
+        except Exception as e:
+            return f"❌ Erro na síntese local: {e}"
             
-            if use_groq:
-                print(f"   [DEBUG] Contexto grande ({prompt_size} chars), usando Groq")
-            
-            # Se contexto grande, usar Groq; caso contrário, LM Studio
-            if use_groq:
-                try:
-                    resposta = chamar_groq(prompt, model="qwen2.5-coder-3b-instant")
-                    if resposta and len(resposta.strip()) > 20:
-                        if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
-                            pass
-                        else:
-                            return resposta
-                except Exception as e_groq:
-                    print(f"   [DEBUG] Erro no Groq: {e_groq}")
-            
-            # Prioridade: LM Studio (Qwen 2.5 3B Instruct local) - para contextos pequenos
-            try:
-                resposta = chamar_lm_studio(prompt)
-                if resposta and len(resposta.strip()) > 20:
-                    if query.strip().lower() not in ["olá", "oi", "ola"] and resposta.strip().lower() in ["olá", "oi", "ola", "olá!", "oi!"]:
-                        pass
-                    else:
-                        return resposta
-            except Exception as e_lm:
-                print(f"   [DEBUG] LM Studio indisponível: {e_lm}")
-                # Fallback para Groq se LM Studio falhar mesmo com contexto grande
-                if use_groq:
-                    try:
-                        resposta = chamar_groq(prompt, model="qwen2.5-coder-3b-instant")
-                        if resposta and len(resposta.strip()) > 20:
-                            return resposta
-                    except:
-                        pass
-        except Exception as e_llm:
-            print(f"   [DEBUG] Erro no LLM: {e_llm}")
-            pass
-        
-        # Fallback: mostrar resumo dos conteúdos se LLM falhar
-        linhas = [f"🌐 Pesquisei e li várias páginas sobre '{query}'. Eis um resumo:"]
-        for i, conteudo in enumerate(conteudos[:3], 1):
-            partes = conteudo.split('\nConteúdo:\n')
-            if len(partes) > 1:
-                url = partes[0].replace('Fonte: ', '').strip()
-                texto = partes[1][:400] + "..." if len(partes[1]) > 400 else partes[1]
-                linhas.append(f"\n{i}. {url}\n   {texto}")
-        
-        linhas.append("\n💡 Não consegui sintetizar uma resposta automática completa, mas podes explorar os conteúdos acima.")
-        return "\n".join(linhas)
-        
     except Exception as e:
-        return f"❌ Erro ao pesquisar '{query}': {e}"
+        return f"❌ Erro na pesquisa: {e}"
 
 
-def action_abrir_url(url: str) -> str:
+def action_wikipedia(query: str, lang: str = "pt") -> str:
+    """Resumo da Wikipedia."""
     try:
-        if not url.startswith(('http://', 'https://')):
-            url = 'https://' + url
-        webbrowser.open_new_tab(url)
-        return f"✅ Abrindo: {url}"
-    except webbrowser.Error as e:
-        return f"❌ Erro ao abrir URL: {e}"
+        url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(query)}"
+        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            return data.get("extract", "Não encontrei resumo.")
+    except Exception as e:
+        return f"❌ Erro Wikipedia: {e}"
 
 
 def action_public_ip() -> str:
     try:
-        with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=6) as resp:
+        with urllib.request.urlopen("https://api.ipify.org?format=json", timeout=5) as resp:
+            return json.loads(resp.read().decode())["ip"]
+    except Exception:
+        return "❌ Erro ao obter IP"
+
+
+def action_crypto_price(coin: str = "bitcoin", currency: str = "eur") -> str:
+    try:
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies={currency}"
+        with urllib.request.urlopen(url, timeout=10) as resp:
             data = json.loads(resp.read().decode())
-        return f"🌐 IP público: {data.get('ip', '?')}"
-    except (URLError, OSError, json.JSONDecodeError) as e:
-        return f"❌ Falha ao obter IP: {e}"
+            price = data[coin][currency]
+            return f"💰 {coin.title()}: {price} {currency.upper()}"
+    except Exception:
+        return "❌ Erro ao obter cotação"
 
 
-def action_wikipedia(query: str, lang: str = "pt") -> str:
-    if not query:
-        return "❌ Sem termo para procurar"
-    lang = (lang or "pt").lower()
-    title = urllib.parse.quote(query.strip().replace(" ", "_"))
-    url = f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{title}"
+def action_noticias(fonte: str = "publico", limite: int = 5) -> str:
+    rss_urls = {
+        "publico": "https://www.publico.pt/feeds/actualidade",
+        "bbc": "http://feeds.bbci.co.uk/portuguese/rss.xml",
+        "hackernews": "https://news.ycombinator.com/rss",
+    }
+    url = rss_urls.get(fonte, rss_urls["publico"])
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-    except (URLError, OSError, json.JSONDecodeError) as e:
-        return f"❌ Wikipedia: {e}"
-    if data.get("type") == "disambiguation":
-        return f"🔎 '{query}' é ambíguo na Wikipedia. Tenta ser mais específico."
-    extract = data.get("extract") or "Sem resumo disponível."
-    page = data.get("content_urls", {}).get("desktop", {}).get("page", "")
-    return f"📚 {data.get('title', query)}\n{extract}" + (f"\n🔗 {page}" if page else "")
-
-
-_CRYPTO_ALIASES = {
-    "btc": "bitcoin", "eth": "ethereum", "sol": "solana", "ada": "cardano",
-    "doge": "dogecoin", "xrp": "ripple", "bnb": "binancecoin", "ltc": "litecoin",
-    "matic": "polygon", "dot": "polkadot",
-}
-
-
-def action_crypto_price(coin: str = "bitcoin", currency: str = "usd") -> str:
-    coin_id = _CRYPTO_ALIASES.get((coin or "").lower(), (coin or "bitcoin").lower())
-    cur = (currency or "usd").lower()
-    url = (
-        "https://api.coingecko.com/api/v3/simple/price"
-        f"?ids={urllib.parse.quote(coin_id)}&vs_currencies={urllib.parse.quote(cur)}"
-        "&include_24hr_change=true"
-    )
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read().decode())
-    except (URLError, OSError, json.JSONDecodeError) as e:
-        return f"❌ CoinGecko: {e}"
-    info = data.get(coin_id)
-    if not info or cur not in info:
-        return f"❌ Não encontrei {coin_id} em {cur.upper()}"
-    price = info[cur]
-    change = info.get(f"{cur}_24h_change")
-    arrow = "📈" if (change or 0) >= 0 else "📉"
-    extra = f" {arrow} {change:+.2f}% (24h)" if change is not None else ""
-    return f"💰 {coin_id.title()}: {price:,.2f} {cur.upper()}{extra}"
-
-
-# ----- Notícias via RSS -----
-RSS_FEEDS = {
-    "g1": "https://g1.globo.com/rss/g1/",
-    "publico": "https://www.publico.pt/rss",
-    "bbc": "https://feeds.bbci.co.uk/portuguese/rss.xml",
-    "rtp": "https://www.rtp.pt/noticias/rss",
-    "dn": "https://www.dn.pt/rss",
-    "tech": "https://feeds.feedburner.com/TechCrunch/",
-    "hackernews": "https://hnrss.org/frontpage",
-}
-
-
-def action_noticias(fonte: str = "g1", limite: int = 5) -> str:
-    fonte_key = (fonte or "g1").strip().lower()
-    if fonte_key not in RSS_FEEDS:
-        disponiveis = ", ".join(sorted(RSS_FEEDS))
-        return f"❌ Fonte desconhecida. Disponíveis: {disponiveis}"
-    try:
-        n = max(1, min(int(limite), 15))
-    except (TypeError, ValueError):
-        n = 5
-    url = RSS_FEEDS[fonte_key]
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "InfinityX/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            raw = resp.read()
-    except (URLError, OSError) as e:
-        return f"❌ RSS '{fonte_key}': {e}"
-    try:
-        root = ET.fromstring(raw)
-    except ET.ParseError as e:
-        return f"❌ Feed inválido ({fonte_key}): {e}"
-
-    items = root.findall(".//item") or root.findall(".//{http://www.w3.org/2005/Atom}entry")
-    if not items:
-        return f"📭 Sem notícias em '{fonte_key}'"
-
-    linhas = [f"📰 {fonte_key.upper()} (top {min(n, len(items))})"]
-    for it in items[:n]:
-        titulo_el = it.find("title") or it.find("{http://www.w3.org/2005/Atom}title")
-        link_el = it.find("link") or it.find("{http://www.w3.org/2005/Atom}link")
-        titulo = (titulo_el.text or "").strip() if titulo_el is not None else "(sem título)"
-        link = ""
-        if link_el is not None:
-            link = (link_el.text or link_el.get("href") or "").strip()
-        linhas.append(f"• {titulo}" + (f"\n  {link}" if link else ""))
-    return "\n".join(linhas)
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            root = ET.fromstring(resp.read())
+            items = root.findall(".//item")[:limite]
+            res = [f"📰 Notícias ({fonte}):"]
+            for item in items:
+                title = item.find("title").text
+                res.append(f" • {title}")
+            return "\n".join(res)
+    except Exception as e:
+        return f"❌ Erro notícias: {e}"

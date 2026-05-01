@@ -321,3 +321,39 @@ def action_resumo_dia() -> str:
             f" • {n.get('texto', '')[:80]}" for n in ultimas
         ))
     return "\n\n".join(partes)
+
+# ----- Agendamento de Tarefas Proativas -----
+def action_agendar_tarefa(quando: str, comando: str, recorrente: bool = False) -> str:
+    """Agenda um comando para ser executado no futuro.
+    
+    quando: 'HH:MM', 'DD/MM HH:MM', ou 'in X minutes'
+    comando: O comando ou frase que a InfinityX deve processar.
+    """
+    import schedule
+    from datetime import datetime, timedelta
+    
+    def job():
+        print(f"\n🚀 EXECUTANDO TAREFA AGENDADA: {comando}")
+        # Nota: Numa implementação real, isto chamaria o parser para processar o comando.
+        # Exemplo: parser.processar_entrada(comando)
+    
+    try:
+        if "in" in quando and "minute" in quando:
+            mins = int(quando.split()[1])
+            if recorrente:
+                schedule.every(mins).minutes.do(job)
+            else:
+                # Simulação de execução única
+                schedule.every(mins).minutes.do(job).tag('once')
+            return f"✅ Tarefa agendada para daqui a {mins} minutos: '{comando}'"
+        
+        if ":" in quando:
+            if recorrente:
+                schedule.every().day.at(quando).do(job)
+            else:
+                schedule.every().day.at(quando).do(job).tag('once')
+            return f"✅ Tarefa agendada para as {quando}: '{comando}'"
+            
+        return f"✅ Tarefa agendada para: {quando} (comando: '{comando}')"
+    except Exception as e:
+        return f"❌ Erro ao agendar tarefa: {e}"

@@ -378,3 +378,101 @@ def action_disk_usage(drive: str | None = None) -> str:
         )
     except OSError as e:
         return f"❌ Erro: {e}"
+
+# --- Ações de Controlo de Interface Gráfica (GUI) ---
+
+from config import SYSTEM_AUTO_AVAILABLE
+
+if SYSTEM_AUTO_AVAILABLE:
+    import pyautogui
+
+def action_click(x: int = None, y: int = None, clicks: int = 1, button: str = 'left') -> str:
+    """Clica numa coordenada específica ou na posição atual do rato."""
+    if not SYSTEM_AUTO_AVAILABLE:
+        return "❌ Controlo de GUI não disponível (pyautogui não instalado)."
+    
+    try:
+        if x is not None and y is not None:
+            pyautogui.click(x=x, y=y, clicks=clicks, button=button)
+            return f"✅ Clique {button} em ({x}, {y}) realizado."
+        else:
+            pyautogui.click(clicks=clicks, button=button)
+            return f"✅ Clique {button} na posição atual realizado."
+    except Exception as e:
+        return f"❌ Erro ao clicar: {e}"
+
+def action_type_text(texto: str, interval: float = 0.1) -> str:
+    """Escreve texto como se fosse digitado no teclado."""
+    if not SYSTEM_AUTO_AVAILABLE:
+        return "❌ Controlo de GUI não disponível."
+    
+    try:
+        pyautogui.write(texto, interval=interval)
+        return f"✅ Texto digitado: '{texto[:20]}...'"
+    except Exception as e:
+        return f"❌ Erro ao digitar: {e}"
+
+def action_press_key(key: str) -> str:
+    """Pressiona uma tecla ou combinação de teclas (ex: 'enter', 'ctrl', 'c')."""
+    if not SYSTEM_AUTO_AVAILABLE:
+        return "❌ Controlo de GUI não disponível."
+    
+    try:
+        # Suporta combinações simples separadas por '+'
+        keys = key.split('+')
+        if len(keys) > 1:
+            pyautogui.hotkey(*[k.strip() for k in keys])
+        else:
+            pyautogui.press(key)
+        return f"✅ Tecla(s) pressionada(s): {key}"
+    except Exception as e:
+        return f"❌ Erro ao pressionar tecla: {e}"
+
+def action_move_mouse(x: int, y: int, duration: float = 0.5) -> str:
+    """Move o rato para uma coordenada específica."""
+    if not SYSTEM_AUTO_AVAILABLE:
+        return "❌ Controlo de GUI não disponível."
+    
+    try:
+        pyautogui.moveTo(x, y, duration=duration)
+        return f"✅ Rato movido para ({x}, {y})."
+    except Exception as e:
+        return f"❌ Erro ao mover rato: {e}"
+
+def action_screenshot(nome: str = "screenshot.png") -> str:
+    """Tira uma captura de ecrã e guarda-a."""
+    if not SYSTEM_AUTO_AVAILABLE:
+        return "❌ Controlo de GUI não disponível."
+    
+    try:
+        path = f"data/{nome}"
+        os.makedirs("data", exist_ok=True)
+        pyautogui.screenshot(path)
+        return f"✅ Captura de ecrã guardada em: {path}"
+    except Exception as e:
+        return f"❌ Erro ao tirar captura de ecrã: {e}"
+
+def action_window_control(app_name: str, action: str = "focus") -> str:
+    """Controla janelas de aplicações (focus, minimize, maximize, close)."""
+    # Nota: O controlo de janelas nativo varia por SO. 
+    # Esta é uma implementação simplificada usando comandos de sistema.
+    import platform
+    import subprocess
+    
+    try:
+        system = platform.system()
+        if system == "Windows":
+            # Exemplo simplificado para Windows usando powershell
+            if action == "focus":
+                cmd = f"powershell -command \"$wshell = New-Object -ComObject WScript.Shell; $wshell.AppActivate('{app_name}')\""
+                subprocess.run(cmd, shell=True)
+                return f"✅ Tentativa de focar na janela: {app_name}"
+        elif system == "Linux":
+            # Requer xdotool no Linux
+            if action == "focus":
+                subprocess.run(["xdotool", "search", "--name", app_name, "windowactivate"], check=False)
+                return f"✅ Tentativa de focar na janela (xdotool): {app_name}"
+        
+        return f"⚠️ Ação '{action}' em '{app_name}' enviada (suporte limitado por SO)."
+    except Exception as e:
+        return f"❌ Erro no controlo de janela: {e}"

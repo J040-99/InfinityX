@@ -1,31 +1,51 @@
 """Utilitários compartilhados (paths, eval seguro, categorização)."""
 
+import ast
+import operator as op
 import os
-import re
 from pathlib import Path
 
 from config import FILE_CATEGORIES, FOLDER_ALIASES
 
 
-def safe_eval(expr: str):
-    """Parser de matemática seguro - usa eval() com validação restritiva.
+# Operadores permitidos para avaliação segura de expressões matemáticas
+_ALLOWED_OPERATORS = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.Div: op.truediv,
+    ast.Pow: op.pow,
+    ast.USub: op.neg,
+}
 
+def safe_eval(expr: str):
+    """Parser de matemática seguro usando AST em vez de eval().
+    
     Devolve int quando o resultado é inteiro exato; caso contrário float.
-    Isto evita coisas como "2 - 10000000000000000" perder precisão e mostrar
-    -9999999999999998.0 em vez de -9999999999999998.
     """
-    if not re.match(r'^[\d\s+\-*/.()%]+$', expr):
-        raise ValueError(f"Expressão inválida: {expr}")
-    allowed_globals = {"__builtins__": {}}
     try:
-        result = eval(expr, allowed_globals, {})
+        node = ast.parse(expr, mode='eval').body
+        result = _eval_node(node)
+        
+        if not isinstance(result, (int, float)):
+            raise ValueError("Resultado não é número")
+        if isinstance(result, float) and result.is_integer():
+            return int(result)
+        return result
     except Exception as e:
         raise ValueError(f"Expressão inválida: {expr}") from e
-    if not isinstance(result, (int, float)):
-        raise ValueError("Resultado não é número")
-    if isinstance(result, float) and result.is_integer():
-        return int(result)
-    return result
+
+def _eval_node(node):
+    if isinstance(node, ast.Num):  # < Python 3.8
+        return node.n
+    elif isinstance(node, ast.Constant):  # >= Python 3.8
+        return node.value
+    elif isinstance(node, ast.BinOp):
+        return _ALLOWED_OPERATORS[type(node.op)](_eval_node(node.left), _eval_node(node.right))
+    elif isinstance(node, ast.UnaryOp):
+        return _ALLOWED_OPERATORS[type(node.op)](_eval_node(node.operand))
+    else:
+        raise TypeError(f"Tipo não suportado: {type(node)}")
 
 
 def get_user_home() -> Path:
